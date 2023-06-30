@@ -1,0 +1,1 @@
+docker build . -f account-service/Dockerfile -t devynchou/simplife.account.service:test    
