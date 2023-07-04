@@ -1,4 +1,4 @@
-use crate::{cache::Redis, db::Db};
+use crate::{db::Db, cache::Redis};
 
 #[derive(Clone)]
 pub struct AppState {

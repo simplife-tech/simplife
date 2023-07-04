@@ -1,19 +1,19 @@
 pub mod proto;
+use redis::aio::ConnectionManager;
 use sqlx::{MySql, Pool};
 use tonic::{async_trait, Request, Response, Status, Code};
 
-use crate::{cache::Redis, db::Db};
+use crate::{db::Db, cache::Redis};
 
 use self::proto::v1::{account_server::Account, AccessKey, GetUidReply};
 
-#[derive(Debug)]
 pub struct AccountService {
     redis: Redis,
     db: Db,
 }
 
 impl AccountService {
-    pub fn new(pool: Pool<MySql>, redis: redis::Client) -> AccountService {
+    pub fn new(pool: Pool<MySql>, redis: ConnectionManager) -> AccountService {
         Self { db: Db::new(pool), redis: Redis::new(redis) }
     }
 }
@@ -25,7 +25,10 @@ impl Account for AccountService {
         if r.access_key.len()<1 {
             return Err(Status::new(Code::InvalidArgument, "access_key不合法"))
         }
-        let (uid, expires) = self.redis.get_uid(&r.access_key).await;
+        let (uid, expires) = match self.redis.get_uid(&r.access_key).await {
+            Ok((uid, expires)) => (uid, expires),
+            Err(_) => return Err(Status::new(Code::Internal, "redis异常"))
+        };
         match uid {
             Some(uid) => {
                 Ok(Response::new(GetUidReply {uid, expires}))

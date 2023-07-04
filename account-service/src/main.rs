@@ -1,12 +1,13 @@
 use akasha::{multiplex_service::MultiplexService, db::db_connect};
 use app_state::AppState;
 use axum::{routing::{ post}, Router};
-use cache::Redis;
 use config::{GLOBAL_CONFIG};
 use db::Db;
 use service::{grpc::{AccountService, proto::v1::account_server::AccountServer}, login::user_login};
+use core::panic;
 use std::{net::{SocketAddr, IpAddr}, str::FromStr};
 use tower::{make::Shared};
+use crate::cache::Redis;
 mod service;
 mod dto;
 mod db;
@@ -16,6 +17,7 @@ use hyper;
 use clap::Parser;
 mod config;
 mod cache;
+
 #[macro_use]
 extern crate lazy_static; 
 
@@ -43,6 +45,7 @@ struct Args {
 
 #[tokio::main]
 async fn main() {
+  akasha::log::init_config(log::LevelFilter::Info);
   let args = Args::parse();
 
   {
@@ -54,8 +57,24 @@ async fn main() {
 	  config.service.session_expired_time = args.session_expired_time;
   }
 
-    let pool = db_connect(&GLOBAL_CONFIG.read().await.db.url, GLOBAL_CONFIG.read().await.db.max_connections).await.unwrap();
-    let redis = redis::Client::open(args.redis).unwrap();
+    let pool = match db_connect(&GLOBAL_CONFIG.read().await.db.url, GLOBAL_CONFIG.read().await.db.max_connections).await {
+      Ok(pool) => pool,
+      Err(err) => {
+        panic!("connect db error! {}", err)
+      }
+    };
+    
+    let redis = match redis::Client::open(args.redis) {
+      Ok(client) => match redis::aio::ConnectionManager::new(client).await {
+        Ok(manager) => manager,
+        Err(err) => {
+          panic!("connect redis error! {}", err)
+        }
+      },
+      Err(err) => {
+        panic!("connect redis error! {}", err)
+      }
+    };
   	let app_state = AppState {db: Db::new(pool.clone()), redis: Redis::new(redis.clone())};
 
 	let rest = Router::new()
@@ -67,8 +86,13 @@ async fn main() {
         .into_service();
 
     let service = MultiplexService::new(rest, grpc);
-
-    let addr = SocketAddr::from((IpAddr::from_str(&GLOBAL_CONFIG.read().await.server.listen_ip).unwrap(), GLOBAL_CONFIG.read().await.server.listen_port));
+    let listen_ip = match IpAddr::from_str(&GLOBAL_CONFIG.read().await.server.listen_ip) {
+      Ok(listen_ip) => listen_ip,
+      Err(err) => {
+        panic!("parse listen_ip error! {}", err)
+      }
+    };
+    let addr = SocketAddr::from((listen_ip, GLOBAL_CONFIG.read().await.server.listen_port));
     hyper::Server::bind(&addr)
         .serve(Shared::new(service))
         .with_graceful_shutdown(akasha::app::shutdown_signal())

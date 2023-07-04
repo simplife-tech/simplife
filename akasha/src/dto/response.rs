@@ -22,6 +22,20 @@ impl Response<String> {
             code,
         }
     }
+    pub fn network_error() -> Response<String> {
+        Response {
+            data: None,
+            message: Some("网络拥堵".to_string()),
+            code: -500,
+        }
+    }
+    pub fn login_error() -> Response<String> {
+        Response {
+            data: None,
+            message: Some("用户名或密码错误".to_string()),
+            code: -401,
+        }
+    }
 }
 
 impl<T> Response<T> { 

@@ -5,3 +5,4 @@ pub mod crypto;
 pub mod db;
 pub mod request;
 pub mod time;
+pub mod log;
