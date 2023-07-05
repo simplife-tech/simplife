@@ -1,11 +1,12 @@
+use redis::aio::ConnectionManager;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Redis {
-    client: redis::Client
+    manager: ConnectionManager
 }
 
 impl Redis {
-    pub fn new(client: redis::Client) -> Redis {
-        Self { client }
+    pub fn new(manager: ConnectionManager) -> Redis {
+        Self { manager }
     }
 }

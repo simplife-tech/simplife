@@ -10,6 +10,10 @@ pub fn _session_key(id: &str) -> String {
     format!("SESSION:{}", id)
 }
 
+pub fn _family_id_key(uid: &i64) -> String {
+    format!("FAMILY_ID:{}", uid.to_string())
+}
+
 impl Redis {
 
     pub async fn set_session(&self, uid: &i64) -> Result<String, RedisError> {
@@ -59,6 +63,27 @@ impl Redis {
             },
             None => Ok((None, 0)),
         }
+    }
+
+    pub async fn set_family_id(&self, uid: &i64, family_id: &i64) {
+        let mut manager = self.manager.clone();
+        let key = _family_id_key(uid);
+        if let Err(err) = manager.set_ex::<_, _, ()>(&key, family_id, 60*60*2).await {
+            log::error!("redis error! {}", err);
+        }
+    }
+
+    pub async fn get_family_id(&self, uid: &i64) -> Result<Option<i64>, RedisError> {
+        let mut manager: redis::aio::ConnectionManager = self.manager.clone();
+        let key = _family_id_key(uid);
+        let family_id: Option<i64> = match manager.get(&key).await {
+            Ok(family_id) => family_id,
+            Err(err) => {
+                log::error!("redis error! {}", err);
+                return Err(err)
+            },
+        };
+        return Ok(family_id)
     }
 
 }

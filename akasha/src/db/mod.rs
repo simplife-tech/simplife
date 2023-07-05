@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use serde::Serializer;
 use sqlx::types::chrono::{Utc, DateTime};
-use chrono::serde::ts_seconds;
+use chrono::{serde::ts_seconds, Local};
 use sqlx::{mysql::{MySqlPoolOptions, MySqlConnectOptions}, MySql, Pool, ConnectOptions};
 
 pub type Db = Arc<Pool<MySql>>;
@@ -17,16 +17,4 @@ pub async fn db_connect(db_url: &str, max_connections: u32) -> Result<Pool<MySql
         .max_connections(max_connections)
         .connect_with(options)
         .await
-}
-
-pub fn serialize_datetime<S>(
-    dt: &Option<DateTime<Utc>>, 
-    serializer: S
-) -> Result<S::Ok, S::Error> 
-where
-    S: Serializer {
-    match dt {
-        Some(dt) => ts_seconds::serialize(dt, serializer),
-        _ => serializer.serialize_none(),
-    }
 }

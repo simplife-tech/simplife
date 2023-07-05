@@ -2,19 +2,21 @@ use akasha::{multiplex_service::MultiplexService, db::db_connect};
 use app_state::AppState;
 use axum::{routing::{post}, Router};
 use cache::Redis;
-use config::{GLOBAL_CONFIG};
+use config::GLOBAL_CONFIG;
 use db::Db;
-use service::grpc::TemplateService;
+use service::{grpc::{LedgerService, client::GrpcClient}, ledger::add_ledger};
 use std::{net::{SocketAddr, IpAddr}, str::FromStr};
-use tower::{make::Shared};
+use tower::make::Shared;
+use crate::service::grpc::proto::v1::ledger_server::LedgerServer;
 mod db;
 mod app_state;
 mod service;
-use tonic::transport::Server;
+use tonic::transport::{Server, Endpoint};
 use hyper;
 use clap::Parser;
 mod config;
 mod cache;
+mod dto;
 #[macro_use]
 extern crate lazy_static; 
 
@@ -35,30 +37,53 @@ struct Args {
 
     #[arg(long, default_value_t = 27001)]
     listen_port: u16,
+
+    #[arg(long, default_value_t = String::from("http://localhost:27001"))]
+    account_service: String,
 }
 
 #[tokio::main]
 async fn main() {
-   let args = Args::parse();
+    akasha::log::init_config(log::LevelFilter::Info);
+    let args = Args::parse();
 
     {
         let mut config = GLOBAL_CONFIG.write().await;
-        config.db.url = args.db;
-        config.db.max_connections = args.db_max_connections;
-        config.server.listen_ip = args.listen_ip;
-        config.server.listen_port = args.listen_port;
+        config.db.url = args.db.clone();
+        config.db.max_connections = args.db_max_connections.clone();
+        config.server.listen_ip = args.listen_ip.clone();
+        config.server.listen_port = args.listen_port.clone();
     }
 
-    let pool = db_connect(&GLOBAL_CONFIG.read().await.db.url, GLOBAL_CONFIG.read().await.db.max_connections).await.unwrap();
-    let redis = redis::Client::open(args.redis).unwrap();
-    let app_state = AppState {db: Db::new(pool.clone()), redis: Redis::new(redis.clone())};
+    let pool = match db_connect(&GLOBAL_CONFIG.read().await.db.url, GLOBAL_CONFIG.read().await.db.max_connections).await {
+        Ok(pool) => pool,
+        Err(err) => {
+            panic!("connect db error! {}", err)
+        }
+    };
+    
+    let redis = match redis::Client::open(args.redis) {
+        Ok(client) => match redis::aio::ConnectionManager::new(client).await {
+            Ok(manager) => manager,
+            Err(err) => {
+                panic!("connect redis error! {}", err)
+            }
+        },
+        Err(err) => {
+            panic!("connect redis error! {}", err)
+        }
+    };
+    let channel = Endpoint::from_str(&args.account_service).unwrap().connect().await.unwrap();
+
+    let app_state = AppState {db: Db::new(pool.clone()), redis: Redis::new(redis.clone()), grpc_client: GrpcClient::new(channel)};
+
 
     let rest = Router::new()
-        // .route("/login", post(user_login))
+        .route("/ledger/add", post(add_ledger))
         .with_state(app_state)
         ;
     let grpc = Server::builder()
-        .add_service(TemplateServer::new(TemplateService::new(pool.clone(), redis.clone())))
+        .add_service(LedgerServer::new(LedgerService::new(pool.clone(), redis.clone())))
         .into_service();
 
     let service = MultiplexService::new(rest, grpc);

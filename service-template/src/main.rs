@@ -39,7 +39,8 @@ struct Args {
 
 #[tokio::main]
 async fn main() {
-   let args = Args::parse();
+    akasha::log::init_config(log::LevelFilter::Info);
+    let args = Args::parse();
 
     {
         let mut config = GLOBAL_CONFIG.write().await;
@@ -49,9 +50,26 @@ async fn main() {
         config.server.listen_port = args.listen_port;
     }
 
-    let pool = db_connect(&GLOBAL_CONFIG.read().await.db.url, GLOBAL_CONFIG.read().await.db.max_connections).await.unwrap();
-    let redis = redis::Client::open(args.redis).unwrap();
+    let pool = match db_connect(&GLOBAL_CONFIG.read().await.db.url, GLOBAL_CONFIG.read().await.db.max_connections).await {
+        Ok(pool) => pool,
+        Err(err) => {
+            panic!("connect db error! {}", err)
+        }
+    };
+    
+    let redis = match redis::Client::open(args.redis) {
+        Ok(client) => match redis::aio::ConnectionManager::new(client).await {
+            Ok(manager) => manager,
+            Err(err) => {
+                panic!("connect redis error! {}", err)
+            }
+        },
+        Err(err) => {
+            panic!("connect redis error! {}", err)
+        }
+    };
     let app_state = AppState {db: Db::new(pool.clone()), redis: Redis::new(redis.clone())};
+  
 
     let rest = Router::new()
         // .route("/login", post(user_login))

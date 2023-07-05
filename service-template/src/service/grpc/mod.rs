@@ -1,17 +1,17 @@
 pub mod proto;
 use sqlx::{MySql, Pool};
 use tonic::{async_trait, Request, Response, Status, Code};
+use redis::aio::ConnectionManager;
 
 use crate::{cache::Redis, db::Db};
 
-#[derive(Debug)]
 pub struct TemplateService {
     redis: Redis,
     db: Db,
 }
 
 impl TemplateService {
-    pub fn new(pool: Pool<MySql>, redis: redis::Client) -> TemplateService {
+    pub fn new(pool: Pool<MySql>, redis: ConnectionManager) -> TemplateService {
         Self { db: Db::new(pool), redis: Redis::new(redis) }
     }
 }

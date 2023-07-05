@@ -3,7 +3,7 @@ use log4rs::append::file::FileAppender;
 use log4rs::encode::pattern::PatternEncoder;
 use log4rs::config::{Appender, Config, Root};
 
-pub fn init_config(level: log::LevelFilter) {
+pub fn init_config(level: log::LevelFilter) -> log4rs::Handle {
     let stdout = ConsoleAppender::builder().build();
 
     let file = FileAppender::builder()
@@ -17,5 +17,5 @@ pub fn init_config(level: log::LevelFilter) {
         .build(Root::builder().appenders(vec!["stdout", "file"]).build(level))
         .unwrap();
 
-    log4rs::init_config(config).unwrap();
+    log4rs::init_config(config).unwrap()
 }

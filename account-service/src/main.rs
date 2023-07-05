@@ -1,12 +1,12 @@
 use akasha::{multiplex_service::MultiplexService, db::db_connect};
 use app_state::AppState;
-use axum::{routing::{ post}, Router};
-use config::{GLOBAL_CONFIG};
+use axum::{routing::post, Router};
+use config::GLOBAL_CONFIG;
 use db::Db;
 use service::{grpc::{AccountService, proto::v1::account_server::AccountServer}, login::user_login};
 use core::panic;
 use std::{net::{SocketAddr, IpAddr}, str::FromStr};
-use tower::{make::Shared};
+use tower::make::Shared;
 use crate::cache::Redis;
 mod service;
 mod dto;

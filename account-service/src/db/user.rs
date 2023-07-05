@@ -1,4 +1,4 @@
-use sqlx::{FromRow, types::chrono::{DateTime, Utc}, Error};
+use sqlx::{FromRow, types::chrono::{DateTime, Local}, Error, Row};
 use serde::{Deserialize, Serialize};
 
 use super::Db;
@@ -9,10 +9,8 @@ pub struct User {
     pub family_id: Option<i64>,
     pub mobile: String,
     pub password: String,
-    #[serde(serialize_with = "akasha::db::serialize_datetime")]
-    pub ctime: Option<DateTime<Utc>>,
-    #[serde(serialize_with = "akasha::db::serialize_datetime")]
-    pub mtime: Option<DateTime<Utc>>
+    pub ctime: DateTime<Local>,
+    pub mtime: DateTime<Local>
 }
 
 impl Db {
@@ -22,6 +20,19 @@ impl Db {
         .fetch_one(&self.pool)
         .await {
             Ok(user) => Ok(user),
+            Err(err) => {
+                log::error!("db error! {}", err);
+                return Err(err)
+            }
+        }
+    }
+
+    pub async fn get_family_id_by_uid(&self, uid: &i64) -> Result<Option<i64>, Error> {
+        match sqlx::query("select family_id from user where id=?")
+        .bind(uid)
+        .fetch_one(&self.pool)
+        .await {
+            Ok(row) => Ok(row.get("family_id")),
             Err(err) => {
                 log::error!("db error! {}", err);
                 return Err(err)

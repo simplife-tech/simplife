@@ -5,11 +5,21 @@ message AccessKey {
     string access_key = 1;  
 }
 
+message Uid {
+    int64 uid = 1;  
+}
+
+
 message GetUidReply {
     int64 uid = 1;
     int64 expires = 2;
 }
 
+message GetFamilyIdReply {
+    int64 family_id = 1;
+}
+
 service Account {
     rpc GetUid (AccessKey) returns (GetUidReply);
+    rpc GetFamilyId (Uid) returns (GetFamilyIdReply);
 }

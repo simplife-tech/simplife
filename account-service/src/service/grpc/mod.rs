@@ -1,11 +1,13 @@
 pub mod proto;
+use std::env::consts::FAMILY;
+
 use redis::aio::ConnectionManager;
 use sqlx::{MySql, Pool};
 use tonic::{async_trait, Request, Response, Status, Code};
 
 use crate::{db::Db, cache::Redis};
 
-use self::proto::v1::{account_server::Account, AccessKey, GetUidReply};
+use self::proto::v1::{account_server::Account, AccessKey, GetUidReply, GetFamilyIdReply, Uid};
 
 pub struct AccountService {
     redis: Redis,
@@ -34,6 +36,26 @@ impl Account for AccountService {
                 Ok(Response::new(GetUidReply {uid, expires}))
             },
             None => Err(Status::new(Code::NotFound, "未登录"))
+        }
+    }
+    async fn get_family_id(&self, request: Request<Uid>) -> Result<Response<GetFamilyIdReply>, Status> {
+        let r = request.into_inner();
+        match self.redis.get_family_id(&r.uid).await {
+            Ok(family_id) => {
+                if let Some(family_id) = family_id {
+                    Ok(Response::new(GetFamilyIdReply {family_id}))
+                } else {
+                    match self.db.get_family_id_by_uid(&r.uid).await {
+                        Ok(family_id) => {
+                            let family_id = family_id.unwrap_or(-1);
+                            self.redis.set_family_id(&r.uid, &family_id).await;
+                            Ok(Response::new(GetFamilyIdReply {family_id}))
+                        }
+                        Err(_) => Err(Status::new(Code::Internal, "db异常"))
+                    }
+                }
+            },
+            Err(_) => Err(Status::new(Code::Internal, "redis异常")),
         }
     }
 }

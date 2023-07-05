@@ -36,6 +36,13 @@ impl Response<String> {
             code: -401,
         }
     }
+    pub fn not_login() -> Response<String> {
+        Response {
+            data: None,
+            message: Some("未登录".to_string()),
+            code: -401,
+        }
+    }
 }
 
 impl<T> Response<T> { 
