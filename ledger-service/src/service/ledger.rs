@@ -16,7 +16,7 @@ pub async fn add_ledger(
         Err(_) => return Json(Response::network_error()).into_response(),
     };
     if family_id <= 0 {
-        match state.db.add_ledger_with_uid(&uid, &akasha::time::timestamp_to_datetime(arg.date), &arg.ammount, &arg.comment).await {
+        match state.db.add_ledger_with_uid(&uid, &akasha::time::timestamp_to_datetime(arg.date), &arg.ammount, &arg.comment, &arg.clazz_1, &arg.clazz_2).await {
             Ok(_) => {
                 let _ = state.redis.remove_user_ledger(&uid).await;
                 Json(Response::success()).into_response()

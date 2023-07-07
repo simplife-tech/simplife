@@ -14,19 +14,23 @@ pub struct Ledger {
     pub ammount: i64,
     pub comment: String,
     pub ctime: DateTime<Local>,
-    pub mtime: DateTime<Local>
+    pub mtime: DateTime<Local>,
+    pub clazz_1: String,
+    pub clazz_2: String,
 }
 
 impl Db {
-    pub async fn add_ledger_with_uid(&self, uid: &i64, date: &DateTime<Local>, ammount: &i64, comment: &str) -> Result<u64, Error> {
+    pub async fn add_ledger_with_uid(&self, uid: &i64, date: &DateTime<Local>, ammount: &i64, comment: &str, clazz_1: &str, clazz_2: &str) -> Result<u64, Error> {
         let now = Local::now();
-        match sqlx::query("insert into ledger (uid, date, ammount, comment, ctime, mtime, state) values (?, ?, ?, ?, ?, ?, ?) ")
+        match sqlx::query("insert into ledger (uid, date, ammount, comment, ctime, mtime, clazz_1, clazz_2, state) values (?, ?, ?, ?, ?, ?, ?, ?, ?) ")
         .bind(uid)
         .bind(date)
         .bind(ammount)
         .bind(comment)
         .bind(now)
-        .bind(now) 
+        .bind(now)
+        .bind(clazz_1)
+        .bind(clazz_2) 
         .bind("active")
         .execute(&self.pool)
         .await {
