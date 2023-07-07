@@ -27,6 +27,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "agenda-service"
+version = "0.1.0"
+dependencies = [
+ "akasha",
+ "axum",
+ "axum-server",
+ "chrono",
+ "clap",
+ "http",
+ "hyper",
+ "lazy_static",
+ "log",
+ "prost",
+ "redis",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tower",
+]
+
+[[package]]
 name = "ahash"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -960,7 +984,6 @@ dependencies = [
 name = "ledger-service"
 version = "0.1.0"
 dependencies = [
- "account-service",
  "akasha",
  "axum",
  "axum-server",

@@ -1,0 +1,14 @@
+syntax = "proto3";
+package agenda.service.v1;
+
+message HelloWorldReq {
+    int64 n = 1;  
+}
+
+message HelloWorldReply {
+    int64 n = 1;
+}
+
+service Agenda {
+    rpc HelloWorld (HelloWorldReq) returns (HelloWorldReply);
+}

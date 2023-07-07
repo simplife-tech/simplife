@@ -3,6 +3,7 @@ members = [
     "akasha",
     "account-service",
     "ledger-service",
+    "agenda-service",
 ]
 
 [profile.dev]

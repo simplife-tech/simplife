@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use super::Db;
 
 #[derive(Serialize, Deserialize, FromRow, Debug)]
-pub struct Ledger {
+pub struct Agenda {
     pub id: i64,
     pub uid: i64,
     pub family_id: Option<i64>,
