@@ -39,7 +39,7 @@ struct Args {
     #[arg(long, default_value_t = 27001)]
     listen_port: u16,
 
-	#[arg(long, default_value_t = 300)]
+	#[arg(long, default_value_t = 60*60)]
     session_expired_time: i32,
 }
 

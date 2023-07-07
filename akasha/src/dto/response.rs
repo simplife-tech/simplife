@@ -15,7 +15,7 @@ impl Response<String> {
             code: 0,
         }
     }
-    pub fn fail(code: i32, message: String) -> Response<String> {
+    pub fn fail(code: i32, message: &str) -> Response<String> {
         Response {
             data: None,
             message: Some(message.to_string()),
@@ -41,6 +41,20 @@ impl Response<String> {
             data: None,
             message: Some("未登录".to_string()),
             code: -401,
+        }
+    }
+    pub fn bad_request(message: &str) -> Response<String> {
+        Response {
+            data: None,
+            message: Some(message.to_string()),
+            code: -400,
+        }
+    }
+    pub fn forbidden() -> Response<String> {
+        Response {
+            data: None,
+            message: Some("无权操作!".to_string()),
+            code: -403,
         }
     }
 }

@@ -1,10 +1,10 @@
 use akasha::{multiplex_service::MultiplexService, db::db_connect};
 use app_state::AppState;
-use axum::{routing::{post}, Router};
+use axum::{routing::{post, get}, Router};
 use cache::Redis;
 use config::GLOBAL_CONFIG;
 use db::Db;
-use service::{grpc::{LedgerService, client::GrpcClient}, ledger::add_ledger};
+use service::{grpc::{LedgerService, client::GrpcClient}, ledger::{add_ledger, ledger_list, delete_ledger}};
 use std::{net::{SocketAddr, IpAddr}, str::FromStr};
 use tower::make::Shared;
 use crate::service::grpc::proto::v1::ledger_server::LedgerServer;
@@ -17,6 +17,7 @@ use clap::Parser;
 mod config;
 mod cache;
 mod dto;
+mod strings;
 #[macro_use]
 extern crate lazy_static; 
 
@@ -80,6 +81,8 @@ async fn main() {
 
     let rest = Router::new()
         .route("/ledger/add", post(add_ledger))
+        .route("/ledger/list", get(ledger_list))
+        .route("/ledger/delete", post(delete_ledger))
         .with_state(app_state)
         ;
     let grpc = Server::builder()

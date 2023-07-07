@@ -59,4 +59,64 @@ impl Db {
         }
     }
 
+    pub async fn delete_ledger(&self, id: &i64) -> Result<u64, Error> {
+        match sqlx::query("update ledger set state = 'deleted' where id = ?")
+        .bind(id)
+        .execute(&self.pool)
+        .await {
+            Ok(r) => Ok(r.rows_affected()),
+            Err(err) => {
+                log::error!("db error! {}", err);
+                return Err(err)
+            }
+        }
+    }
+
+    pub async fn get_ledger(&self, id: &i64) -> Result<Option<Ledger>, Error> {
+        match sqlx::query_as::<_, Ledger>("select * from ledger where id=?")
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await {
+            Ok(ledger) => Ok(ledger),
+            Err(err) => {
+                log::error!("db error! {}", err);
+                return Err(err)
+            }
+        }
+    }
+
+    pub async fn get_family_ledger_list(&self, family_id: &i64, date_start: &DateTime<Local>, date_end: &DateTime<Local>, pn: &i64, ps: &i64) -> Result<Vec<Ledger>, Error> {
+        match sqlx::query_as::<_, Ledger>("select * from ledger where family_id=? and date between ? and ? and state='active' order by date desc limit ?, ?")
+        .bind(family_id)
+        .bind(date_start)
+        .bind(date_end)
+        .bind((pn-1)*ps)
+        .bind(ps)
+        .fetch_all(&self.pool)
+        .await {
+            Ok(ledgers) => Ok(ledgers),
+            Err(err) => {
+                log::error!("db error! {}", err);
+                return Err(err)
+            }
+        }
+    }
+
+    pub async fn get_user_ledger_list(&self, uid: &i64, date_start: &DateTime<Local>, date_end: &DateTime<Local>, pn: &i64, ps: &i64) -> Result<Vec<Ledger>, Error> {
+        match sqlx::query_as::<_, Ledger>("select * from ledger where uid=? and date between ? and ? and state='active' order by date desc limit ?, ?")
+        .bind(uid)
+        .bind(date_start)
+        .bind(date_end)
+        .bind((pn-1)*ps)
+        .bind(ps)
+        .fetch_all(&self.pool)
+        .await {
+            Ok(ledgers) => Ok(ledgers),
+            Err(err) => {
+                log::error!("db error! {}", err);
+                return Err(err)
+            }
+        }
+    }
+
 }

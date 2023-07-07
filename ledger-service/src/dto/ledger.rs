@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug)]
-pub struct LedgerReq {
+pub struct AddLedgerReq {
     pub ammount: i64,
     pub comment: String,
     pub date: i64,
@@ -9,6 +9,18 @@ pub struct LedgerReq {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-pub struct LedgerRsp {
+pub struct GetLedgerReq {
+    pub pn: i64, // 页码
+    pub ps: i64, // 页大小
+    pub date_start: i64,
+    pub date_end: i64,
+    pub access_key: String,
+    pub kind: String // personal/family
+}
 
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct DeleteLedgerReq {
+    pub access_key: String,
+    pub id: i64
 }

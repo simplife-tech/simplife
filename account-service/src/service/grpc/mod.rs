@@ -40,22 +40,27 @@ impl Account for AccountService {
     }
     async fn get_family_id(&self, request: Request<Uid>) -> Result<Response<GetFamilyIdReply>, Status> {
         let r = request.into_inner();
-        match self.redis.get_family_id(&r.uid).await {
+        
+        let family_id = match self.redis.get_family_id(&r.uid).await {
             Ok(family_id) => {
-                if let Some(family_id) = family_id {
-                    Ok(Response::new(GetFamilyIdReply {family_id}))
-                } else {
-                    match self.db.get_family_id_by_uid(&r.uid).await {
-                        Ok(family_id) => {
-                            let family_id = family_id.unwrap_or(-1);
-                            self.redis.set_family_id(&r.uid, &family_id).await;
-                            Ok(Response::new(GetFamilyIdReply {family_id}))
-                        }
-                        Err(_) => Err(Status::new(Code::Internal, "db异常"))
-                    }
-                }
+                family_id
             },
-            Err(_) => Err(Status::new(Code::Internal, "redis异常")),
+            Err(err) => {
+                log::error!("redis error! {}", err);
+                None
+            }
+        };
+        if let Some(family_id) = family_id {
+            Ok(Response::new(GetFamilyIdReply {family_id}))
+        } else {
+            match self.db.get_family_id_by_uid(&r.uid).await {
+                Ok(family_id) => {
+                    let family_id = family_id.unwrap_or(-1);
+                    self.redis.set_family_id(&r.uid, &family_id).await;
+                    Ok(Response::new(GetFamilyIdReply {family_id}))
+                }
+                Err(_) => Err(Status::new(Code::Internal, "db异常"))
+            }
         }
     }
 }
