@@ -4,7 +4,7 @@ use axum::{routing::{post, get}, Router};
 use cache::Redis;
 use config::GLOBAL_CONFIG;
 use db::Db;
-use service::{grpc::{client::GrpcClient, proto::v1::agenda_server::AgendaServer, AgendaService}, ledger::{add_ledger, ledger_list, delete_ledger}};
+use service::{grpc::{client::GrpcClient, proto::v1::agenda_server::AgendaServer, AgendaService}, agenda::{add_agenda, agenda_list, delete_agenda, update_agenda}, };
 use std::{net::{SocketAddr, IpAddr}, str::FromStr};
 use tower::make::Shared;
 mod db;
@@ -79,9 +79,10 @@ async fn main() {
 
 
     let rest = Router::new()
-        .route("/ledger/add", post(add_ledger))
-        .route("/ledger/list", get(ledger_list))
-        .route("/ledger/delete", post(delete_ledger))
+        .route("/agenda/add", post(add_agenda))
+        .route("/agenda/list", get(agenda_list))
+        .route("/agenda/delete", post(delete_agenda))
+        .route("/agenda/update", post(update_agenda))
         .with_state(app_state)
         ;
     let grpc = Server::builder()

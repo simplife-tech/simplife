@@ -1,29 +1,24 @@
 use redis::{AsyncCommands, RedisError};
 
-use crate::db::ledger::Ledger;
+use crate::db::agenda::Agenda;
 
 use super::Redis;
 
-
-pub fn _user_ledger_key(uid: &i64) -> String {
-    format!("LEDGER:USER:{}", uid.to_string())
+pub fn _family_agenda_key(family_id: &i64) -> String {
+    format!("AGENDA:FAMILY:{}", family_id.to_string())
 }
 
-pub fn _family_ledger_key(family_id: &i64) -> String {
-    format!("LEDGER:FAMILY:{}", family_id.to_string())
-}
-
-pub fn _ledger_hset_field(date_start: &i64, date_end: &i64, pn: &i64, ps: &i64) -> String {
+pub fn _agenda_hset_field(date_start: &i64, date_end: &i64, pn: &i64, ps: &i64) -> String {
     format!("DATE_{}_{}_PN_{}_PS_{}", date_start.to_string(), date_end.to_string(), pn.to_string(), ps.to_string())
 }
 
 impl Redis {
 
-    pub async fn set_user_ledger(&self, uid: &i64, ledgers: &Vec<Ledger>, date_start: &i64, date_end: &i64, pn: &i64, ps: &i64) -> Result<(), RedisError> {
+    pub async fn set_agenda(&self, family_id: &i64, agendas: &Vec<Agenda>, date_start: &i64, date_end: &i64, pn: &i64, ps: &i64) -> Result<(), RedisError> {
         let mut manager = self.manager.clone();
-        let key = _user_ledger_key(&uid);
-        let field = _ledger_hset_field(date_start, date_end, pn, ps);
-        match manager.hset::<_, _, _, ()>(&key, field, serde_json::to_string(ledgers).unwrap()).await {
+        let key = _family_agenda_key(&family_id);
+        let field = _agenda_hset_field(date_start, date_end, pn, ps);
+        match manager.hset::<_, _, _, ()>(&key, field, serde_json::to_string(agendas).unwrap()).await {
             Ok(_) => {
                 match manager.expire::<_, ()>(&key, 60*60*1).await {
                     Ok(_) => Ok(()),
@@ -40,10 +35,10 @@ impl Redis {
         }
     }
 
-    pub async fn get_user_ledger(&self, uid: &i64, date_start: &i64, date_end: &i64, pn: &i64, ps: &i64) -> Result<Option<Vec<Ledger>>, RedisError> {
+    pub async fn get_agenda(&self, family_id: &i64, date_start: &i64, date_end: &i64, pn: &i64, ps: &i64) -> Result<Option<Vec<Agenda>>, RedisError> {
         let mut manager = self.manager.clone();
-        let key = _user_ledger_key(&uid);
-        let field = _ledger_hset_field(date_start, date_end, pn, ps);
+        let key = _family_agenda_key(&family_id);
+        let field = _agenda_hset_field(date_start, date_end, pn, ps);
         let exist: i8 = match manager.hexists(&key, &field).await {
             Ok(exist) => exist,
             Err(err) => {
@@ -59,76 +54,16 @@ impl Redis {
                     return Err(err)
                 }
             };
-            let ledgers: Vec<Ledger> = serde_json::from_str(&s).unwrap_or(vec![]);
-            return Ok(Some(ledgers))
+            let agendas: Vec<Agenda> = serde_json::from_str(&s).unwrap_or(vec![]);
+            return Ok(Some(agendas))
         } else {
             return Ok(None)
         }
     }
 
-    pub async fn remove_user_ledger(&self, uid: &i64) -> Result<(), RedisError> {
+    pub async fn remove_agenda(&self, family_id: &i64) -> Result<(), RedisError> {
         let mut manager = self.manager.clone();
-        let key = _user_ledger_key(&uid);
-        match manager.del::<_, ()>(key).await {
-            Ok(_) => Ok(()),
-            Err(err) => {
-                log::error!("redis error! {}", err);
-                Err(err)
-            }
-        }
-    }
-
-    pub async fn set_family_ledger(&self, family_id: &i64, ledgers: &Vec<Ledger>, date_start: &i64, date_end: &i64, pn: &i64, ps: &i64) -> Result<(), RedisError> {
-        let mut manager = self.manager.clone();
-        let key = _family_ledger_key(&family_id);
-        let field = _ledger_hset_field(date_start, date_end, pn, ps);
-        match manager.hset::<_, _, _, ()>(&key, field, serde_json::to_string(ledgers).unwrap()).await {
-            Ok(_) => {
-                match manager.expire::<_, ()>(&key, 60*60*1).await {
-                    Ok(_) => Ok(()),
-                    Err(err) => {
-                        log::error!("redis error! {}", err);
-                        return Err(err)
-                    }
-                }
-            },
-            Err(err) => {
-                log::error!("redis error! {}", err);
-                return Err(err)
-            }
-        }
-    }
-
-    pub async fn get_family_ledger(&self, family_id: &i64, date_start: &i64, date_end: &i64, pn: &i64, ps: &i64) -> Result<Option<Vec<Ledger>>, RedisError> {
-        let mut manager = self.manager.clone();
-        let key = _family_ledger_key(&family_id);
-        let field = _ledger_hset_field(date_start, date_end, pn, ps);
-        let exist: i8 = match manager.hexists(&key, &field).await {
-            Ok(exist) => exist,
-            Err(err) => {
-                log::error!("redis error! {}", err);
-                return Err(err)
-            }
-        };
-        println!("{}", exist);
-        if exist == 1 {
-            let s: String = match manager.hget(&key, &field).await {
-                Ok(s) => s,
-                Err(err) => {
-                    log::error!("redis error! {}", err);
-                    return Err(err)
-                }
-            };
-            let ledgers: Vec<Ledger> = serde_json::from_str(&s).unwrap_or(vec![]);
-            return Ok(Some(ledgers))
-        } else {
-            return Ok(None)
-        }
-    }
-
-    pub async fn remove_family_ledger(&self, family_id: &i64) -> Result<(), RedisError> {
-        let mut manager = self.manager.clone();
-        let key = _family_ledger_key(&family_id);
+        let key = _family_agenda_key(&family_id);
         match manager.del::<_, ()>(key).await {
             Ok(_) => Ok(()),
             Err(err) => {

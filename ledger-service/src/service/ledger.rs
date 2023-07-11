@@ -26,7 +26,7 @@ pub async fn add_ledger(
             }
         }
     } else {
-        match state.db.add_ledger_with_uid_and_family_id(&uid, &family_id, &akasha::time::timestamp_to_datetime(arg.date), &arg.ammount, &arg.comment).await {
+        match state.db.add_ledger_with_uid_and_family_id(&uid, &family_id, &akasha::time::timestamp_to_datetime(arg.date), &arg.ammount, &arg.comment, &arg.clazz_1, &arg.clazz_2).await {
             Ok(_) => {
                 let _ = state.redis.remove_family_ledger(&family_id).await;
                 Json(Response::success()).into_response()

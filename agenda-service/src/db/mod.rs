@@ -1,5 +1,5 @@
 use sqlx::{MySql, Pool};
-pub mod ledger;
+pub mod agenda;
 
 #[derive(Debug, Clone)]
 pub struct Db {

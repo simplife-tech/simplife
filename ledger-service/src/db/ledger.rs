@@ -19,10 +19,17 @@ pub struct Ledger {
     pub clazz_2: String,
 }
 
+const ADD_USER_LEDGER_SQL: &str = "insert into ledger (uid, date, ammount, comment, ctime, mtime, clazz_1, clazz_2, state) values (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+const ADD_FAMILY_LEDGER_SQL: &str = "insert into ledger (uid, family_id, date, ammount, comment, ctime, mtime, clazz_1, clazz_2, state) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+const DELETE_LEDGER_SQL: &str = "update ledger set state = 'deleted' where id = ?";
+const GET_LEDGER_SQL: &str = "select id, uid, family_id, date, ammount, comment, ctime, mtime, clazz_1, clazz_2 from ledger where id=?";
+const GET_FAMILY_LEDGER_LIST_SQL: &str = "select id, uid, family_id, date, ammount, comment, ctime, mtime, clazz_1, clazz_2 from ledger where family_id=? and date between ? and ? and state='active' order by date desc limit ?, ?";
+const GET_USER_LEDGER_LIST_SQL: &str = "select id, uid, family_id, date, ammount, comment, ctime, mtime, clazz_1, clazz_2 from ledger where uid=? and date between ? and ? and state='active' order by date desc limit ?, ?";
+
 impl Db {
     pub async fn add_ledger_with_uid(&self, uid: &i64, date: &DateTime<Local>, ammount: &i64, comment: &str, clazz_1: &str, clazz_2: &str) -> Result<u64, Error> {
         let now = Local::now();
-        match sqlx::query("insert into ledger (uid, date, ammount, comment, ctime, mtime, clazz_1, clazz_2, state) values (?, ?, ?, ?, ?, ?, ?, ?, ?) ")
+        match sqlx::query(ADD_USER_LEDGER_SQL)
         .bind(uid)
         .bind(date)
         .bind(ammount)
@@ -42,16 +49,18 @@ impl Db {
         }
     }
 
-    pub async fn add_ledger_with_uid_and_family_id(&self, uid: &i64, family_id: &i64, date: &DateTime<Local>, ammount: &i64, comment: &str) -> Result<u64, Error> {
+    pub async fn add_ledger_with_uid_and_family_id(&self, uid: &i64, family_id: &i64, date: &DateTime<Local>, ammount: &i64, comment: &str, clazz_1: &str, clazz_2: &str) -> Result<u64, Error> {
         let now = Local::now();
-        match sqlx::query("insert into ledger (uid, family_id, date, ammount, comment, ctime, mtime, state) values (?, ?, ?, ?, ?, ?, ?, ?) ")
+        match sqlx::query(ADD_FAMILY_LEDGER_SQL)
         .bind(uid)
         .bind(family_id)
         .bind(date)
         .bind(ammount)
         .bind(comment)
         .bind(now)
-        .bind(now) 
+        .bind(now)
+        .bind(clazz_1)
+        .bind(clazz_2) 
         .bind("active")
         .execute(&self.pool)
         .await {
@@ -64,7 +73,7 @@ impl Db {
     }
 
     pub async fn delete_ledger(&self, id: &i64) -> Result<u64, Error> {
-        match sqlx::query("update ledger set state = 'deleted' where id = ?")
+        match sqlx::query(DELETE_LEDGER_SQL)
         .bind(id)
         .execute(&self.pool)
         .await {
@@ -77,7 +86,7 @@ impl Db {
     }
 
     pub async fn get_ledger(&self, id: &i64) -> Result<Option<Ledger>, Error> {
-        match sqlx::query_as::<_, Ledger>("select * from ledger where id=?")
+        match sqlx::query_as::<_, Ledger>(GET_LEDGER_SQL)
         .bind(id)
         .fetch_optional(&self.pool)
         .await {
@@ -90,7 +99,7 @@ impl Db {
     }
 
     pub async fn get_family_ledger_list(&self, family_id: &i64, date_start: &DateTime<Local>, date_end: &DateTime<Local>, pn: &i64, ps: &i64) -> Result<Vec<Ledger>, Error> {
-        match sqlx::query_as::<_, Ledger>("select * from ledger where family_id=? and date between ? and ? and state='active' order by date desc limit ?, ?")
+        match sqlx::query_as::<_, Ledger>(GET_FAMILY_LEDGER_LIST_SQL)
         .bind(family_id)
         .bind(date_start)
         .bind(date_end)
@@ -107,7 +116,7 @@ impl Db {
     }
 
     pub async fn get_user_ledger_list(&self, uid: &i64, date_start: &DateTime<Local>, date_end: &DateTime<Local>, pn: &i64, ps: &i64) -> Result<Vec<Ledger>, Error> {
-        match sqlx::query_as::<_, Ledger>("select * from ledger where uid=? and date between ? and ? and state='active' order by date desc limit ?, ?")
+        match sqlx::query_as::<_, Ledger>(GET_USER_LEDGER_LIST_SQL)
         .bind(uid)
         .bind(date_start)
         .bind(date_end)
