@@ -4,7 +4,7 @@ use axum::{routing::{post, get}, Router};
 use cache::Redis;
 use config::GLOBAL_CONFIG;
 use db::Db;
-use service::{grpc::{LedgerService, client::GrpcClient}, ledger::{add_ledger, ledger_list, delete_ledger}};
+use service::{grpc::{LedgerService, client::GrpcClient}, ledger::{add_ledger, ledger_list, delete_ledger}, cash::{record_cash, cash_record_list, delete_cash_record}};
 use std::{net::{SocketAddr, IpAddr}, str::FromStr};
 use tower::make::Shared;
 use crate::service::grpc::proto::v1::ledger_server::LedgerServer;
@@ -83,6 +83,9 @@ async fn main() {
         .route("/ledger/add", post(add_ledger))
         .route("/ledger/list", get(ledger_list))
         .route("/ledger/delete", post(delete_ledger))
+        .route("/cash/add", post(record_cash))
+        .route("/cash/list", get(cash_record_list))
+        .route("/cash/delete", post(delete_cash_record))
         .with_state(app_state)
         ;
     let grpc = Server::builder()

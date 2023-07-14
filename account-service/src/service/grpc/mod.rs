@@ -1,5 +1,4 @@
 pub mod proto;
-use std::env::consts::FAMILY;
 
 use redis::aio::ConnectionManager;
 use sqlx::{MySql, Pool};

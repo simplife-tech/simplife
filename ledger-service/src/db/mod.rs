@@ -1,5 +1,6 @@
 use sqlx::{MySql, Pool};
 pub mod ledger;
+pub mod cash;
 
 #[derive(Debug, Clone)]
 pub struct Db {
