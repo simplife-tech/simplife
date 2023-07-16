@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct RecordCashReq {
-    pub ammount: i64,
+    pub amount: i64,
     pub date: i64,
     pub access_key: String,
 }

@@ -1,5 +1,5 @@
 
-use chrono::Local;
+use chrono::{Local, NaiveDateTime};
 use sqlx::{FromRow, types::chrono::DateTime, Error};
 use serde::{Deserialize, Serialize};
 
@@ -10,29 +10,29 @@ pub struct Ledger {
     pub id: i64,
     pub uid: i64,
     pub family_id: Option<i64>,
-    pub date: DateTime<Local>,
-    pub ammount: i64,
+    pub date: NaiveDateTime,
+    pub amount: i64,
     pub comment: String,
-    pub ctime: DateTime<Local>,
-    pub mtime: DateTime<Local>,
+    pub ctime: NaiveDateTime,
+    pub mtime: NaiveDateTime,
     pub clazz_1: String,
     pub clazz_2: String,
 }
 
-const ADD_USER_LEDGER_SQL: &str = "insert into ledger (uid, date, ammount, comment, ctime, mtime, clazz_1, clazz_2, state) values (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-const ADD_FAMILY_LEDGER_SQL: &str = "insert into ledger (uid, family_id, date, ammount, comment, ctime, mtime, clazz_1, clazz_2, state) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+const ADD_USER_LEDGER_SQL: &str = "insert into ledger (uid, date, amount, comment, ctime, mtime, clazz_1, clazz_2, state) values (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+const ADD_FAMILY_LEDGER_SQL: &str = "insert into ledger (uid, family_id, date, amount, comment, ctime, mtime, clazz_1, clazz_2, state) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 const DELETE_LEDGER_SQL: &str = "update ledger set state = 'deleted' where id = ?";
-const GET_LEDGER_SQL: &str = "select id, uid, family_id, date, ammount, comment, ctime, mtime, clazz_1, clazz_2 from ledger where id=?";
-const GET_FAMILY_LEDGER_LIST_SQL: &str = "select id, uid, family_id, date, ammount, comment, ctime, mtime, clazz_1, clazz_2 from ledger where family_id=? and date between ? and ? and state='active' order by date desc limit ?, ?";
-const GET_USER_LEDGER_LIST_SQL: &str = "select id, uid, family_id, date, ammount, comment, ctime, mtime, clazz_1, clazz_2 from ledger where uid=? and date between ? and ? and state='active' order by date desc limit ?, ?";
+const GET_LEDGER_SQL: &str = "select id, uid, family_id, date, amount, comment, ctime, mtime, clazz_1, clazz_2 from ledger where id=?";
+const GET_FAMILY_LEDGER_LIST_SQL: &str = "select id, uid, family_id, date, amount, comment, ctime, mtime, clazz_1, clazz_2 from ledger where family_id=? and date between ? and ? and state='active' order by date desc limit ?, ?";
+const GET_USER_LEDGER_LIST_SQL: &str = "select id, uid, family_id, date, amount, comment, ctime, mtime, clazz_1, clazz_2 from ledger where uid=? and date between ? and ? and state='active' order by date desc limit ?, ?";
 
 impl Db {
-    pub async fn add_ledger_with_uid(&self, uid: &i64, date: &DateTime<Local>, ammount: &i64, comment: &str, clazz_1: &str, clazz_2: &str) -> Result<u64, Error> {
-        let now = Local::now();
+    pub async fn add_ledger_with_uid(&self, uid: &i64, date: &NaiveDateTime, amount: &i64, comment: &str, clazz_1: &str, clazz_2: &str) -> Result<u64, Error> {
+        let now = Local::now().naive_local();
         match sqlx::query(ADD_USER_LEDGER_SQL)
         .bind(uid)
         .bind(date)
-        .bind(ammount)
+        .bind(amount)
         .bind(comment)
         .bind(now)
         .bind(now)
@@ -49,13 +49,13 @@ impl Db {
         }
     }
 
-    pub async fn add_ledger_with_uid_and_family_id(&self, uid: &i64, family_id: &i64, date: &DateTime<Local>, ammount: &i64, comment: &str, clazz_1: &str, clazz_2: &str) -> Result<u64, Error> {
-        let now = Local::now();
+    pub async fn add_ledger_with_uid_and_family_id(&self, uid: &i64, family_id: &i64, date: &NaiveDateTime, amount: &i64, comment: &str, clazz_1: &str, clazz_2: &str) -> Result<u64, Error> {
+        let now = Local::now().naive_local();
         match sqlx::query(ADD_FAMILY_LEDGER_SQL)
         .bind(uid)
         .bind(family_id)
         .bind(date)
-        .bind(ammount)
+        .bind(amount)
         .bind(comment)
         .bind(now)
         .bind(now)
@@ -98,7 +98,7 @@ impl Db {
         }
     }
 
-    pub async fn get_family_ledger_list(&self, family_id: &i64, date_start: &DateTime<Local>, date_end: &DateTime<Local>, pn: &i64, ps: &i64) -> Result<Vec<Ledger>, Error> {
+    pub async fn get_family_ledger_list(&self, family_id: &i64, date_start: &NaiveDateTime, date_end: &NaiveDateTime, pn: &i64, ps: &i64) -> Result<Vec<Ledger>, Error> {
         match sqlx::query_as::<_, Ledger>(GET_FAMILY_LEDGER_LIST_SQL)
         .bind(family_id)
         .bind(date_start)
@@ -115,7 +115,7 @@ impl Db {
         }
     }
 
-    pub async fn get_user_ledger_list(&self, uid: &i64, date_start: &DateTime<Local>, date_end: &DateTime<Local>, pn: &i64, ps: &i64) -> Result<Vec<Ledger>, Error> {
+    pub async fn get_user_ledger_list(&self, uid: &i64, date_start: &NaiveDateTime, date_end: &NaiveDateTime, pn: &i64, ps: &i64) -> Result<Vec<Ledger>, Error> {
         match sqlx::query_as::<_, Ledger>(GET_USER_LEDGER_LIST_SQL)
         .bind(uid)
         .bind(date_start)

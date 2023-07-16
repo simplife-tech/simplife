@@ -110,7 +110,6 @@ impl Redis {
                 return Err(err)
             }
         };
-        println!("{}", exist);
         if exist == 1 {
             let s: String = match manager.hget(&key, &field).await {
                 Ok(s) => s,

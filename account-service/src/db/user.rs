@@ -1,4 +1,4 @@
-use sqlx::{FromRow, types::chrono::{DateTime, Local}, Error, Row};
+use sqlx::{FromRow, types::chrono::NaiveDateTime, Error, Row};
 use serde::{Deserialize, Serialize};
 
 use super::Db;
@@ -9,8 +9,8 @@ pub struct User {
     pub family_id: Option<i64>,
     pub mobile: String,
     pub password: String,
-    pub ctime: DateTime<Local>,
-    pub mtime: DateTime<Local>
+    pub ctime: NaiveDateTime,
+    pub mtime: NaiveDateTime
 }
 
 impl Db {

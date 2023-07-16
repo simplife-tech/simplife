@@ -1,5 +1,5 @@
 
-use chrono::Local;
+use chrono::{Local, NaiveDateTime};
 use sqlx::{FromRow, types::chrono::DateTime, Error};
 use serde::{Deserialize, Serialize};
 
@@ -13,8 +13,8 @@ pub struct Agenda {
     pub title: String,
     pub content: String,
     pub state: String,
-    pub ctime: DateTime<Local>,
-    pub mtime: DateTime<Local>,
+    pub ctime: NaiveDateTime,
+    pub mtime: NaiveDateTime,
 }
 
 #[derive(Serialize, Deserialize, FromRow, Debug)]
@@ -39,7 +39,7 @@ const ADD_AGENDA_LOG_SQL: &str = "insert into agenda_log (uid, agenda_id, family
 
 impl Db {
     pub async fn add_agenda(&self, uid: &i64, family_id: &i64, title: &str, content: &str) -> Result<u64, Error> {
-        let now = Local::now();
+        let now = Local::now().naive_local();
         match sqlx::query(ADD_AGENDA_SQL)
         .bind(uid)
         .bind(family_id)
@@ -82,7 +82,7 @@ impl Db {
                 return Err(err)
             }
         };
-        let now = Local::now();
+        let now = Local::now().naive_local();
         let r = match sqlx::query(ADD_AGENDA_LOG_SQL)
         .bind(uid)
         .bind(id)
@@ -130,7 +130,7 @@ impl Db {
                 return Err(err)
             }
         };
-        let now = Local::now();
+        let now = Local::now().naive_local();
         let r = match sqlx::query(ADD_AGENDA_LOG_SQL)
         .bind(uid)
         .bind(id)
@@ -165,7 +165,7 @@ impl Db {
         }
     }
 
-    pub async fn get_agenda_list(&self, family_id: &i64, date_start: &DateTime<Local>, date_end: &DateTime<Local>, pn: &i64, ps: &i64) -> Result<Vec<Agenda>, Error> {
+    pub async fn get_agenda_list(&self, family_id: &i64, date_start: &NaiveDateTime, date_end: &NaiveDateTime, pn: &i64, ps: &i64) -> Result<Vec<Agenda>, Error> {
         match sqlx::query_as::<_, Agenda>(GET_AGENDA_LIST_SQL)
         .bind(family_id)
         .bind(date_start)

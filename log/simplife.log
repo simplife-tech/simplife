@@ -1,0 +1,5 @@
+2023-07-16T20:23:45.018129+08:00 - db error! pool timed out while waiting for an open connection
+2023-07-16T20:24:16.355791+08:00 - db error! error occurred while decoding column "date": mismatched types; Rust type `chrono::naive::datetime::NaiveDateTime` (as SQL type `DATETIME`) is not compatible with SQL type `TIMESTAMP`
+2023-07-16T20:58:12.856321+08:00 - redis error! broken pipe
+2023-07-16T22:48:06.423454+08:00 - redis error! Broken pipe (os error 32)
+2023-07-16T22:48:34.685769+08:00 - redis error! broken pipe

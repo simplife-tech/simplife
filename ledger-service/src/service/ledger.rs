@@ -1,7 +1,7 @@
 use akasha::dto::response::Response;
 use axum::{extract::{State, Query}, Json, response::IntoResponse};
 
-use crate::{app_state::AppState, dto::ledger::{AddLedgerReq, GetLedgerReq, DeleteLedgerReq}, strings::{NO_FAMILY, NO_LEDGER}};
+use crate::{app_state::AppState, dto::ledger::{AddLedgerReq, GetLedgerReq, DeleteLedgerReq, LedgerDto}, strings::{NO_FAMILY, NO_LEDGER}};
 
 pub async fn add_ledger(
     State(state): State<AppState>,
@@ -16,7 +16,7 @@ pub async fn add_ledger(
         Err(_) => return Json(Response::network_error()).into_response(),
     };
     if family_id <= 0 {
-        match state.db.add_ledger_with_uid(&uid, &akasha::time::timestamp_to_datetime(arg.date), &arg.ammount, &arg.comment, &arg.clazz_1, &arg.clazz_2).await {
+        match state.db.add_ledger_with_uid(&uid, &akasha::time::timestamp_to_datetime(arg.date), &arg.amount, &arg.comment, &arg.clazz_1, &arg.clazz_2).await {
             Ok(_) => {
                 let _ = state.redis.remove_user_ledger(&uid).await;
                 Json(Response::success()).into_response()
@@ -26,8 +26,9 @@ pub async fn add_ledger(
             }
         }
     } else {
-        match state.db.add_ledger_with_uid_and_family_id(&uid, &family_id, &akasha::time::timestamp_to_datetime(arg.date), &arg.ammount, &arg.comment, &arg.clazz_1, &arg.clazz_2).await {
+        match state.db.add_ledger_with_uid_and_family_id(&uid, &family_id, &akasha::time::timestamp_to_datetime(arg.date), &arg.amount, &arg.comment, &arg.clazz_1, &arg.clazz_2).await {
             Ok(_) => {
+                let _ = state.redis.remove_user_ledger(&uid).await;
                 let _ = state.redis.remove_family_ledger(&family_id).await;
                 Json(Response::success()).into_response()
             },
@@ -95,12 +96,28 @@ pub async fn ledger_list(
                 Err(_) => None
             };
             if let Some(ledgers) = ledgers {
-                return Json(Response::data(ledgers)).into_response()
+                let ledgers_dto: Vec<LedgerDto> = ledgers.iter().map(|ledger| LedgerDto {
+                    id: ledger.id,
+                    amount: ledger.amount,
+                    comment: ledger.comment.clone(),
+                    date: ledger.date.timestamp(),
+                    clazz_1: ledger.clazz_1.clone(),
+                    clazz_2: ledger.clazz_2.clone()
+                }).collect();
+                return Json(Response::data(ledgers_dto)).into_response()
             }
             match state.db.get_family_ledger_list(&family_id, &akasha::time::timestamp_to_datetime(arg.date_start), &akasha::time::timestamp_to_datetime(arg.date_end), &arg.pn, &arg.ps).await {
                 Ok(ledgers) => {
                     let _ = state.redis.set_family_ledger(&family_id, &ledgers, &arg.date_start, &arg.date_end, &arg.pn, &arg.ps).await;
-                    return Json(Response::data(ledgers)).into_response()
+                    let ledgers_dto: Vec<LedgerDto> = ledgers.iter().map(|ledger| LedgerDto {
+                        id: ledger.id,
+                        amount: ledger.amount,
+                        comment: ledger.comment.clone(),
+                        date: ledger.date.timestamp(),
+                        clazz_1: ledger.clazz_1.clone(),
+                        clazz_2: ledger.clazz_2.clone()
+                    }).collect();
+                    return Json(Response::data(ledgers_dto)).into_response()
                 },
                 Err(_) => {
                     return Json(Response::network_error()).into_response()
@@ -115,12 +132,28 @@ pub async fn ledger_list(
             Err(_) => None
         };
         if let Some(ledgers) = ledgers {
-            return Json(Response::data(ledgers)).into_response()
+            let ledgers_dto: Vec<LedgerDto> = ledgers.iter().map(|ledger| LedgerDto {
+                id: ledger.id,
+                amount: ledger.amount,
+                comment: ledger.comment.clone(),
+                date: ledger.date.timestamp(),
+                clazz_1: ledger.clazz_1.clone(),
+                clazz_2: ledger.clazz_2.clone()
+            }).collect();
+            return Json(Response::data(ledgers_dto)).into_response()
         }
         match state.db.get_user_ledger_list(&uid, &akasha::time::timestamp_to_datetime(arg.date_start), &akasha::time::timestamp_to_datetime(arg.date_end), &arg.pn, &arg.ps).await {
             Ok(ledgers) => {
                 let _ = state.redis.set_user_ledger(&uid, &ledgers, &arg.date_start, &arg.date_end, &arg.pn, &arg.ps).await;
-                return Json(Response::data(ledgers)).into_response()
+                let ledgers_dto: Vec<LedgerDto> = ledgers.iter().map(|ledger| LedgerDto {
+                    id: ledger.id,
+                    amount: ledger.amount,
+                    comment: ledger.comment.clone(),
+                    date: ledger.date.timestamp(),
+                    clazz_1: ledger.clazz_1.clone(),
+                    clazz_2: ledger.clazz_2.clone()
+                }).collect();
+                return Json(Response::data(ledgers_dto)).into_response()
             },
             Err(_) => {
                 return Json(Response::network_error()).into_response()

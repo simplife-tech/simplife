@@ -2,10 +2,20 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct AddLedgerReq {
-    pub ammount: i64,
+    pub amount: i64,
     pub comment: String,
     pub date: i64,
     pub access_key: String,
+    pub clazz_1: String,
+    pub clazz_2: String
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct LedgerDto {
+    pub id: i64,
+    pub amount: i64,
+    pub comment: String,
+    pub date: i64,
     pub clazz_1: String,
     pub clazz_2: String
 }

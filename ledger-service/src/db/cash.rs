@@ -1,4 +1,4 @@
-use chrono::Local;
+use chrono::{Local, NaiveDateTime};
 use sqlx::{FromRow, types::chrono::DateTime, Error};
 use serde::{Deserialize, Serialize};
 
@@ -8,24 +8,24 @@ use super::Db;
 pub struct Cash {
     pub id: i64,
     pub family_id: i64,
-    pub date: DateTime<Local>,
-    pub ammount: i64,
-    pub ctime: DateTime<Local>,
-    pub mtime: DateTime<Local>,
+    pub date: NaiveDateTime,
+    pub amount: i64,
+    pub ctime: NaiveDateTime,
+    pub mtime: NaiveDateTime,
 }
 
-const ADD_CASH_RECORD_SQL: &str = "insert into cash (family_id, date, ammount, ctime, mtime, state) values (?, ?, ?, ?, ?, ?)";
-const GET_CASH_RECORD_LIST_SQL: &str = "select id, family_id, date, ammount, ctime, mtime from cash where family_id=? and date between ? and ? and state='active' order by date desc limit ?, ?";
+const ADD_CASH_RECORD_SQL: &str = "insert into cash (family_id, date, amount, ctime, mtime, state) values (?, ?, ?, ?, ?, ?)";
+const GET_CASH_RECORD_LIST_SQL: &str = "select id, family_id, date, amount, ctime, mtime from cash where family_id=? and date between ? and ? and state='active' order by date desc limit ?, ?";
 const DELETE_CASH_RECORD_SQL: &str = "update cash set state = 'deleted' where id = ?";
-const GET_CASH_RECORD_SQL: &str = "select id, family_id, date, ammount, ctime, mtime from cash where id=?";
+const GET_CASH_RECORD_SQL: &str = "select id, family_id, date, amount, ctime, mtime from cash where id=?";
 
 impl Db {
-    pub async fn add_cash_record(&self, family_id: &i64, date: &DateTime<Local>, ammount: &i64) -> Result<u64, Error> {
-        let now = Local::now();
+    pub async fn add_cash_record(&self, family_id: &i64, date: &NaiveDateTime, amount: &i64) -> Result<u64, Error> {
+        let now = Local::now().naive_local();
         match sqlx::query(ADD_CASH_RECORD_SQL)
         .bind(family_id)
         .bind(date)
-        .bind(ammount)
+        .bind(amount)
         .bind(now)
         .bind(now)
         .bind("active")
@@ -39,7 +39,7 @@ impl Db {
         }
     }
 
-    pub async fn get_cash_record_list(&self, family_id: &i64, date_start: &DateTime<Local>, date_end: &DateTime<Local>, pn: &i64, ps: &i64) -> Result<Vec<Cash>, Error> {
+    pub async fn get_cash_record_list(&self, family_id: &i64, date_start: &NaiveDateTime, date_end: &NaiveDateTime, pn: &i64, ps: &i64) -> Result<Vec<Cash>, Error> {
         match sqlx::query_as::<_, Cash>(GET_CASH_RECORD_LIST_SQL)
         .bind(family_id)
         .bind(date_start)

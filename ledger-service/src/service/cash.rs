@@ -19,7 +19,7 @@ pub async fn record_cash(
     if family_id <= 0 {
         return Json(Response::fail(-500, NO_FAMILY)).into_response()    
     } else {
-        match state.db.add_cash_record(&family_id, &akasha::time::timestamp_to_datetime(arg.date), &arg.ammount).await {
+        match state.db.add_cash_record(&family_id, &akasha::time::timestamp_to_datetime(arg.date), &arg.amount).await {
             Ok(_) => {
                 Json(Response::success()).into_response()
             },
