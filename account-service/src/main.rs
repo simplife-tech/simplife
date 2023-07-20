@@ -39,14 +39,24 @@ struct Args {
     #[arg(long, default_value_t = 27001)]
     listen_port: u16,
 
-	#[arg(long, default_value_t = 60*60)]
+	  #[arg(long, default_value_t = 60*60)]
     session_expired_time: i32,
+
+    #[arg(long, default_value_t = String::from("api.simplife.tech:6831"))]
+    trace_endpoint: String,
+
+    #[arg(long, default_value_t = String::from("test"))]
+    service_version: String,
 }
+
+
 
 #[tokio::main]
 async fn main() {
   akasha::log::init_config(log::LevelFilter::Info);
   let args = Args::parse();
+  let tracer = akasha::app::init_tracer(args.trace_endpoint, "account.service".to_string(), args.service_version).expect("failed to initialise tracer.");
+
 
   {
     let mut config = GLOBAL_CONFIG.write().await;
@@ -79,8 +89,9 @@ async fn main() {
 
 	let rest = Router::new()
         .route("/login", post(user_login))
-        .with_state(app_state)
-        ;
+        .layer(akasha::app::TraceLayer { tracer })
+        .with_state(app_state);
+        
     let grpc = Server::builder()
         .add_service(AccountServer::new(AccountService::new(pool.clone(), redis.clone())))
         .into_service();

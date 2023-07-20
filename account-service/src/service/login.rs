@@ -9,6 +9,7 @@ pub async fn user_login(
     State(state): State<AppState>,
     Json(arg): Json<LoginReq>
 ) -> axum::response::Response {
+    // tracing::info!("Calling root");
     let password_hash = sha3_512(arg.password.to_string());
     match state.db.find_user_by_mobile(&arg.mobile).await {
         Ok(user) => {

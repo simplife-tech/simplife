@@ -83,6 +83,9 @@ dependencies = [
  "hyper",
  "log",
  "log4rs",
+ "opentelemetry",
+ "opentelemetry-jaeger",
+ "pin-project-lite",
  "prost",
  "serde",
  "sha3",
@@ -435,6 +438,16 @@ name = "crc-catalog"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9cace84e55f07e7301bae1c519df89cdad8cc3cd868413d3fdbdeca9ff3db484"
+
+[[package]]
+name = "crossbeam-channel"
+version = "0.5.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a33c2bf77f2df06183c3aa30d1e96c0695a313d4f9c453cc3762a6db39f99200"
+dependencies = [
+ "cfg-if",
+ "crossbeam-utils",
+]
 
 [[package]]
 name = "crossbeam-queue"
@@ -916,6 +929,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "integer-encoding"
+version = "3.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8bb03732005da905c88227371639bf1ad885cc712789c011c31c5fb3ab3ccf02"
+
+[[package]]
 name = "io-lifetimes"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1204,6 +1223,77 @@ name = "once_cell"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd8b5dd2ae5ed71462c540258bedcb51965123ad7e7ccf4b9a8cafaa4a63576d"
+
+[[package]]
+name = "opentelemetry"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f4b8347cc26099d3aeee044065ecc3ae11469796b4d65d065a23a584ed92a6f"
+dependencies = [
+ "opentelemetry_api",
+ "opentelemetry_sdk",
+]
+
+[[package]]
+name = "opentelemetry-jaeger"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08e028dc9f4f304e9320ce38c80e7cf74067415b1ad5a8750a38bae54a4d450d"
+dependencies = [
+ "async-trait",
+ "futures",
+ "futures-executor",
+ "once_cell",
+ "opentelemetry",
+ "opentelemetry-semantic-conventions",
+ "thiserror",
+ "thrift",
+ "tokio",
+]
+
+[[package]]
+name = "opentelemetry-semantic-conventions"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "24e33428e6bf08c6f7fcea4ddb8e358fab0fe48ab877a87c70c6ebe20f673ce5"
+dependencies = [
+ "opentelemetry",
+]
+
+[[package]]
+name = "opentelemetry_api"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed41783a5bf567688eb38372f2b7a8530f5a607a4b49d38dd7573236c23ca7e2"
+dependencies = [
+ "futures-channel",
+ "futures-util",
+ "indexmap",
+ "once_cell",
+ "pin-project-lite",
+ "thiserror",
+ "urlencoding",
+]
+
+[[package]]
+name = "opentelemetry_sdk"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b3a2a91fdbfdd4d212c0dcc2ab540de2c2bcbbd90be17de7a7daf8822d010c1"
+dependencies = [
+ "async-trait",
+ "crossbeam-channel",
+ "futures-channel",
+ "futures-executor",
+ "futures-util",
+ "once_cell",
+ "opentelemetry_api",
+ "percent-encoding",
+ "rand",
+ "thiserror",
+ "tokio",
+ "tokio-stream",
+]
 
 [[package]]
 name = "ordered-float"
@@ -1979,6 +2069,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "threadpool"
+version = "1.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d050e60b33d41c19108b32cea32164033a9013fe3b46cbd4457559bfbf77afaa"
+dependencies = [
+ "num_cpus",
+]
+
+[[package]]
+name = "thrift"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e54bc85fc7faa8bc175c4bab5b92ba8d9a3ce893d0e9f42cc455c8ab16a9e09"
+dependencies = [
+ "byteorder",
+ "integer-encoding",
+ "log",
+ "ordered-float",
+ "threadpool",
+]
+
+[[package]]
 name = "time"
 version = "0.1.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2279,6 +2391,12 @@ dependencies = [
  "idna",
  "percent-encoding",
 ]
+
+[[package]]
+name = "urlencoding"
+version = "2.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8db7427f936968176eaa7cdf81b7f98b980b18495ec28f1b5791ac3bfe3eea9"
 
 [[package]]
 name = "utf8parse"
