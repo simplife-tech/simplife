@@ -1,10 +1,9 @@
 use rand::{distributions::Alphanumeric, Rng};
 use redis::{AsyncCommands, RedisError};
-
+use akasha::opentelemetry::trace::{Tracer, Span, TracerProvider, TraceId, SpanId};
 use crate::config::GLOBAL_CONFIG;
 
 use super::Redis;
-
 
 pub fn _session_key(id: &str) -> String {
     format!("SESSION:{}", id)
@@ -16,7 +15,7 @@ pub fn _family_id_key(uid: &i64) -> String {
 
 impl Redis {
 
-    pub async fn set_session(&self, uid: &i64) -> Result<String, RedisError> {
+    pub async fn set_session(&self, trace_id: TraceId, span_id: SpanId, uid: &i64) -> Result<String, RedisError> {
         let mut manager = self.manager.clone();
         let access_key: String = rand::thread_rng()
             .sample_iter(&Alphanumeric)
@@ -24,7 +23,7 @@ impl Redis {
             .map(char::from)
             .collect();
         let key = _session_key(&access_key);
-        match manager.set_ex::<_, _, ()>(&key, uid, GLOBAL_CONFIG.read().await.service.session_expired_time.try_into().unwrap()).await {
+        match instrumented_redis_cmd!(trace_id, span_id, manager, &key, set_ex::<_, _, ()>(&key, uid, GLOBAL_CONFIG.read().await.service.session_expired_time.try_into().unwrap())).await {
             Ok(_) => return Ok(access_key),
             Err(err) => {
                 log::error!("redis error! {}", err);

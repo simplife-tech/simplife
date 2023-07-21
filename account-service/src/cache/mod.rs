@@ -4,7 +4,7 @@ pub mod session;
 
 #[derive(Clone)]
 pub struct Redis {
-    manager: ConnectionManager
+    manager: ConnectionManager,
 }
 
 impl Redis {

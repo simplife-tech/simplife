@@ -1,110 +1,77 @@
-use std::{task::{Poll, Context, ready}, pin::Pin, future::Future};
 
-use http::{Request, Response, HeaderValue};
+use axum::{middleware::Next, response::IntoResponse, extract::State};
+use http::{Request, StatusCode, HeaderValue};
+use hyper::{body::{to_bytes, Bytes}, Body};
+use serde_json::json;
 use tokio::signal;
-use opentelemetry::{trace::{TraceError, Tracer, TraceContextExt}, sdk::trace as sdktrace, Key};
-use tower::{Layer, Service};
-use pin_project_lite::pin_project;
+use opentelemetry::{trace::{TraceError, Tracer, TraceContextExt, TracerProvider, TraceId}, sdk::trace::{self as sdktrace}, Key};
 
-#[derive(Clone)]
-pub struct TraceLayer {
-    pub tracer: sdktrace::Tracer,
+#[macro_export]
+macro_rules! instrumented_redis_cmd {
+    ($trace_id:expr, $span_id:expr, $conn:expr, $key:expr, $($arg:tt)*) => {{
+        let tracer = akasha::opentelemetry::global::tracer_provider().versioned_tracer("account.service",None,None);
+        let mut span = tracer.span_builder("Redis.Command").with_trace_id($trace_id).with_span_id($span_id).start(&tracer);
+        span.set_attribute(akasha::opentelemetry::Key::new("db.key").string($key.to_string()));
+        span.set_attribute(akasha::opentelemetry::Key::new("db.statement").string(stringify!($($arg)*)));
+        span.set_attribute(akasha::opentelemetry::Key::new("peer.service").string("redis"));
+        let result = $conn.$($arg)*;
+        span.end();
+        result
+    }};
 }
 
-impl<S> Layer<S> for TraceLayer {
-    type Service = TraceService<S>;
+pub async fn trace_http<B>(
+    mut req: Request<B>,
+    next: Next<B>
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    opentelemetry::global::tracer_provider().versioned_tracer("account.service",None,None).in_span(req.uri().to_string(), |cx| async move {
+        let span = cx.span();
+        span.set_attribute(Key::new("http.method").string(req.method().to_string()));
+        span.set_attribute(Key::new("http.target").string(req.uri().to_string()));
+        let trace_id = span.span_context().trace_id();
+        let span_id = span.span_context().span_id();
+        req.extensions_mut().insert(trace_id);
+        req.extensions_mut().insert(span_id);
 
-    fn layer(&self, service: S) -> Self::Service {
-        TraceService {
-            tracer: self.tracer.clone(),
-            service
-        }
-    }
-}
+        let res = next.run(req).await;
 
-#[derive(Clone)]
-pub struct TraceService<S> {
-    tracer: sdktrace::Tracer,
-    service: S,
-}
-
-impl<S, ReqBody, ResBody> Service<Request<ReqBody>> for TraceService<S>
-where
-    S: Service<Request<ReqBody>, Response = Response<ResBody>>
-{
-    type Response = S::Response;
-    type Error = S::Error;
-    type Future = ResponseFuture<S::Future>;
-
-    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.service.poll_ready(cx)
-    }
-
-    fn call(&mut self, request: Request<ReqBody>) -> Self::Future {
-        self.tracer.in_span(request.uri().to_string(), |cx| {
-            let span = cx.span();
-            span.set_attribute(Key::new("http.method").string(request.method().to_string()));
-            span.set_attribute(Key::new("http.target").string(request.uri().to_string()));
-            ResponseFuture {
-                inner: self.service.call(request),
-                trace_id: span.span_context().trace_id().to_string()
-            }
-        })
-    }
-}
-
-pin_project! {
-    pub struct ResponseFuture<F> {
-        #[pin]
-        inner: F,
-        trace_id: String,
-    }
-}
-
-impl<F, ResBody, E> Future for ResponseFuture<F>
-where
-    F: Future<Output = Result<Response<ResBody>, E>>,
-{
-    type Output = Result<Response<ResBody>, E>;
-
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let trace_id = self.trace_id.clone();
-        let mut response: Response<ResBody> = ready!(self.project().inner.poll(cx))?;
-        let hdr = response.headers_mut();
-        match hdr.try_entry("simplife-trace-id") {
+        let (parts, body) = res.into_parts();
+        let bytes = to_bytes(body).await.unwrap_or(Bytes::default());
+        let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap_or(json!({ "code": -500 }));
+        span.set_attribute(Key::new("http.ecode").i64(v.get("code").unwrap_or(&json!(-500)).as_i64().unwrap_or(-500)));
+        let mut res = http::Response::from_parts(parts, Body::from(bytes));
+        span.set_attribute(Key::new("http.status_code").i64(res.status().as_u16() as i64));
+        match res.headers_mut().try_entry("simplife-trace-id") {
             Ok(entry) => {
                 match entry {
                     axum::http::header::Entry::Occupied(mut val) => {
                         //has val
                     }
                     axum::http::header::Entry::Vacant(val) => {
-                        val.insert(HeaderValue::from_str(&trace_id).unwrap());
+                        val.insert(HeaderValue::from_str(&trace_id.to_string()).unwrap());
                     }
                 }
-            }
+            },
             Err(_) => {
-                hdr.append(
-                    "simplife-trace-id",
-                    HeaderValue::from_str(&trace_id).unwrap(),
-                );
-            }
-        }
-        Poll::Ready(Ok(response))
-    }
+                res.headers_mut().append("simplife-trace-id", HeaderValue::from_str(&trace_id.to_string()).unwrap());
+            },
+        };
+        Ok(res)
+    }).await
 }
 
-pub fn init_tracer(endpoint: String, service_name: String, service_version: String) -> Result<sdktrace::Tracer, TraceError> {
-    opentelemetry::global::set_text_map_propagator(opentelemetry_jaeger::Propagator::new());
-    opentelemetry_jaeger::new_agent_pipeline()
+pub fn init_tracer(endpoint: String, service_name: String, service_version: String) {
+    let provider = opentelemetry_jaeger::new_agent_pipeline()
         .with_endpoint(endpoint)
         .with_service_name(&service_name)
         .with_trace_config(opentelemetry::sdk::trace::config().with_resource(
             opentelemetry::sdk::Resource::new(vec![
-                opentelemetry::KeyValue::new("service.name", service_name), // this will not override the trace-udp-demo
+                opentelemetry::KeyValue::new("service.name", service_name), 
                 opentelemetry::KeyValue::new("service.version", service_version)
             ]),
         ))
-        .install_batch(opentelemetry::runtime::Tokio)
+        .build_batch(opentelemetry::runtime::Tokio);
+    opentelemetry::global::set_tracer_provider(provider.unwrap());
 }
 
 pub async fn shutdown_signal() {

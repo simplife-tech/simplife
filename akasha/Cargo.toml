@@ -22,5 +22,6 @@ log4rs = "1.1.1"
 opentelemetry = { version = "0.19.0", features = ["rt-tokio"] }
 opentelemetry-jaeger = { version = "0.18.0", features = ["rt-tokio"] }
 pin-project-lite = "0.2"
+serde_json = "1.0.103"
 
 

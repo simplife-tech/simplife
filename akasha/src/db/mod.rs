@@ -1,7 +1,4 @@
 use std::sync::Arc;
-use serde::Serializer;
-use sqlx::types::chrono::{Utc, DateTime};
-use chrono::{serde::ts_seconds, Local};
 use sqlx::{mysql::{MySqlPoolOptions, MySqlConnectOptions}, MySql, Pool, ConnectOptions};
 
 pub type Db = Arc<Pool<MySql>>;

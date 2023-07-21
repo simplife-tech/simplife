@@ -6,3 +6,4 @@ pub mod db;
 pub mod request;
 pub mod time;
 pub mod log;
+pub use opentelemetry;

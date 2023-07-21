@@ -19,7 +19,9 @@ mod config;
 mod cache;
 
 #[macro_use]
-extern crate lazy_static; 
+extern crate lazy_static;
+#[macro_use]
+extern crate akasha; 
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -55,7 +57,7 @@ struct Args {
 async fn main() {
   akasha::log::init_config(log::LevelFilter::Info);
   let args = Args::parse();
-  let tracer = akasha::app::init_tracer(args.trace_endpoint, "account.service".to_string(), args.service_version).expect("failed to initialise tracer.");
+  akasha::app::init_tracer(args.trace_endpoint, "account.service".to_string(), args.service_version);
 
 
   {
@@ -89,7 +91,7 @@ async fn main() {
 
 	let rest = Router::new()
         .route("/login", post(user_login))
-        .layer(akasha::app::TraceLayer { tracer })
+        .layer(axum::middleware::from_fn(akasha::app::trace_http))
         .with_state(app_state);
         
     let grpc = Server::builder()

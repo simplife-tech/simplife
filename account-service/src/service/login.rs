@@ -1,20 +1,21 @@
 
-use akasha::dto::response::Response;
-use axum::{Json, response::IntoResponse, extract::State};
+use akasha::{dto::response::Response, opentelemetry::trace::{TraceId, SpanId}};
+use axum::{Json, response::IntoResponse, extract::State, Extension};
 
 use crate::{dto::login::{LoginReq, LoginRsp}, app_state::AppState};
 use akasha::crypto::sha3_512;
 
 pub async fn user_login(
+    Extension(trace_id): Extension<TraceId>,
+    Extension(span_id): Extension<SpanId>,
     State(state): State<AppState>,
     Json(arg): Json<LoginReq>
 ) -> axum::response::Response {
-    // tracing::info!("Calling root");
     let password_hash = sha3_512(arg.password.to_string());
     match state.db.find_user_by_mobile(&arg.mobile).await {
         Ok(user) => {
             if user.password == password_hash {
-                match state.redis.set_session(&user.id).await {
+                match state.redis.set_session(trace_id, span_id, &user.id).await {
                     Ok(session_id) => {
                         Json(Response::data(LoginRsp{
                             uid: user.id,
