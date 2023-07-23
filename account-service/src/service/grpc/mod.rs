@@ -1,6 +1,5 @@
 pub mod proto;
 
-use akasha::opentelemetry::sdk::trace::Tracer;
 use redis::aio::ConnectionManager;
 use sqlx::{MySql, Pool};
 use tonic::{async_trait, Request, Response, Status, Code};

@@ -15,7 +15,7 @@ pub fn _family_id_key(uid: &i64) -> String {
 
 impl Redis {
 
-    pub async fn set_session(&self, trace_id: TraceId, span_id: SpanId, uid: &i64) -> Result<String, RedisError> {
+    pub async fn set_session(&self, oc: akasha::opentelemetry::Context, uid: &i64) -> Result<String, RedisError> {
         let mut manager = self.manager.clone();
         let access_key: String = rand::thread_rng()
             .sample_iter(&Alphanumeric)
@@ -23,7 +23,7 @@ impl Redis {
             .map(char::from)
             .collect();
         let key = _session_key(&access_key);
-        match instrumented_redis_cmd!(trace_id, span_id, manager, &key, set_ex::<_, _, ()>(&key, uid, GLOBAL_CONFIG.read().await.service.session_expired_time.try_into().unwrap())).await {
+        match instrumented_redis_cmd!(oc, manager, &key, set_ex::<_, _, ()>(&key, uid, GLOBAL_CONFIG.read().await.service.session_expired_time.try_into().unwrap())).await {
             Ok(_) => return Ok(access_key),
             Err(err) => {
                 log::error!("redis error! {}", err);
@@ -32,10 +32,10 @@ impl Redis {
         };
     }
 
-    pub async fn get_uid(&self, access_key: &String) -> Result<(Option<i64>, i64), RedisError>  {
+    pub async fn get_uid(&self, oc: akasha::opentelemetry::Context, access_key: &String) -> Result<(Option<i64>, i64), RedisError>  {
         let mut manager = self.manager.clone();
         let key = _session_key(access_key);
-        let uid: Option<i64> = match manager.get(&key).await {
+        let uid: Option<i64> = match instrumented_redis_cmd!(oc, manager, &key, get(&key)).await {
             Ok(uid) => uid,
             Err(err) => {
                 log::error!("redis error! {}", err);

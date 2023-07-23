@@ -8,9 +8,9 @@ use opentelemetry::{trace::{TraceError, Tracer, TraceContextExt, TracerProvider,
 
 #[macro_export]
 macro_rules! instrumented_redis_cmd {
-    ($trace_id:expr, $span_id:expr, $conn:expr, $key:expr, $($arg:tt)*) => {{
-        let tracer = akasha::opentelemetry::global::tracer_provider().versioned_tracer("account.service",None,None);
-        let mut span = tracer.span_builder("Redis.Command").with_trace_id($trace_id).with_span_id($span_id).start(&tracer);
+    ($oc:expr, $conn:expr, $key:expr, $($arg:tt)*) => {{
+        let tracer = akasha::opentelemetry::global::tracer_provider().tracer("");
+        let mut span = tracer.start_with_context("Redis.Command", &$oc);
         span.set_attribute(akasha::opentelemetry::Key::new("db.key").string($key.to_string()));
         span.set_attribute(akasha::opentelemetry::Key::new("db.statement").string(stringify!($($arg)*)));
         span.set_attribute(akasha::opentelemetry::Key::new("peer.service").string("redis"));
@@ -24,7 +24,7 @@ pub async fn trace_http<B>(
     mut req: Request<B>,
     next: Next<B>
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    opentelemetry::global::tracer_provider().versioned_tracer("account.service",None,None).in_span(req.uri().to_string(), |cx| async move {
+    opentelemetry::global::tracer_provider().tracer("").in_span(req.uri().to_string(), |cx| async move {
         let span = cx.span();
         span.set_attribute(Key::new("http.method").string(req.method().to_string()));
         span.set_attribute(Key::new("http.target").string(req.uri().to_string()));
@@ -32,6 +32,7 @@ pub async fn trace_http<B>(
         let span_id = span.span_context().span_id();
         req.extensions_mut().insert(trace_id);
         req.extensions_mut().insert(span_id);
+        req.extensions_mut().insert(cx.clone());
 
         let res = next.run(req).await;
 
