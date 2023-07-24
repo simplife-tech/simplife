@@ -28,6 +28,26 @@ macro_rules! instrumented_redis_cmd {
     }};
 }
 
+#[macro_export]
+macro_rules! instrumented_mysql_cmd {
+    ($oc:expr, $key:expr, $($arg:tt)*) => {{
+        let tracer = akasha::opentelemetry::global::tracer_provider().tracer("");
+        let name = if $key.contains("select") {
+            "MySQL:Query"
+        } else if $key.contains("insert") || $key.contains("update") {
+            "MySQL:Exec"
+        } else {
+            "MySQL:COMMAND"
+        };
+        let mut span = tracer.start_with_context(name, &$oc);
+        span.set_attribute(akasha::opentelemetry::Key::new("db.statement").string($key));
+        span.set_attribute(akasha::opentelemetry::Key::new("peer.service").string("mysql"));
+        let result = $($arg)*.await;
+        span.end();
+        result
+    }};
+}
+
 pub async fn trace_http<B>(
     mut req: Request<B>,
     next: Next<B>

@@ -41,8 +41,10 @@ impl Account for AccountService {
 
     }
     async fn get_family_id(&self, request: Request<Uid>) -> Result<Response<GetFamilyIdReply>, Status> {
-        let r = request.into_inner();
-        let family_id = match self.redis.get_family_id(&r.uid).await {
+        let (_metadata, extensions, message) = request.into_parts();
+        let oc = extensions.get::<akasha::opentelemetry::Context>().unwrap();
+        
+        let family_id = match self.redis.get_family_id(oc, &message.uid).await {
             Ok(family_id) => {
                 family_id
             },
@@ -54,10 +56,10 @@ impl Account for AccountService {
         if let Some(family_id) = family_id {
             Ok(Response::new(GetFamilyIdReply {family_id}))
         } else {
-            match self.db.get_family_id_by_uid(&r.uid).await {
+            match self.db.get_family_id_by_uid(oc, &message.uid).await {
                 Ok(family_id) => {
                     let family_id = family_id.unwrap_or(-1);
-                    self.redis.set_family_id(&r.uid, &family_id).await;
+                    self.redis.set_family_id(oc, &message.uid, &family_id).await;
                     Ok(Response::new(GetFamilyIdReply {family_id}))
                 }
                 Err(_) => Err(Status::new(Code::Internal, "db异常"))

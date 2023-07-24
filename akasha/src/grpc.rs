@@ -44,7 +44,7 @@ where
         let mut inner = std::mem::replace(&mut self.inner, clone);
         let uri = req.uri().clone();
         let method = req.method().clone();
-        let mut tonic_req = tonic::Request::from_http(req);
+        let tonic_req = tonic::Request::from_http(req);
         
         let oc = global::get_text_map_propagator(|propagator| {
             propagator.extract(&MetadataExtractor(tonic_req.metadata()))
@@ -54,7 +54,7 @@ where
             let tracer = opentelemetry::global::tracer_provider().tracer("");
             let span = tracer.start_with_context(uri.path().to_string(), &oc);
             let oc = opentelemetry::Context::current_with_span(span);
-            let (metadata, extensions, message) = tonic_req.into_parts();
+            let (metadata, _extensions, message) = tonic_req.into_parts();
             let mut req = hyper::Request::builder()
             .method(method)
             .extension(oc)

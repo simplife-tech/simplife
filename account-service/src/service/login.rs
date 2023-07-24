@@ -11,7 +11,7 @@ pub async fn user_login(
     Json(arg): Json<LoginReq>
 ) -> axum::response::Response {
     let password_hash = sha3_512(arg.password.to_string());
-    match state.db.find_user_by_mobile(&arg.mobile).await {
+    match state.db.find_user_by_mobile(&oc, &arg.mobile).await {
         Ok(user) => {
             if user.password == password_hash {
                 match state.redis.set_session(&oc, &user.id).await {

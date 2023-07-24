@@ -1,6 +1,6 @@
 use rand::{distributions::Alphanumeric, Rng};
 use redis::{AsyncCommands, RedisError};
-use akasha::opentelemetry::trace::{Tracer, Span, TracerProvider, TraceId, SpanId};
+use akasha::opentelemetry::trace::{Tracer, Span, TracerProvider};
 use crate::config::GLOBAL_CONFIG;
 
 use super::Redis;
@@ -44,14 +44,14 @@ impl Redis {
         };
         match uid {
             Some(uid) => {
-                match manager.expire::<_, ()>(&key, GLOBAL_CONFIG.read().await.service.session_expired_time.try_into().unwrap()).await {
+                match instrumented_redis_cmd!(oc, manager, &key, expire::<_, ()>(&key, GLOBAL_CONFIG.read().await.service.session_expired_time.try_into().unwrap())) {
                     Ok(_) => (),
                     Err(err) => {
                         log::error!("redis error! {}", err);
                         return Err(err)
                     }
                 };
-                let expires: i64 = match manager.ttl(&key).await {
+                let expires: i64 = match instrumented_redis_cmd!(oc, manager, &key, ttl(&key)) {
                     Ok(expires) => expires,
                     Err(err) => {
                         log::error!("redis error! {}", err);
@@ -64,18 +64,18 @@ impl Redis {
         }
     }
 
-    pub async fn set_family_id(&self, uid: &i64, family_id: &i64) {
+    pub async fn set_family_id(&self, oc: &akasha::opentelemetry::Context, uid: &i64, family_id: &i64) {
         let mut manager = self.manager.clone();
         let key = _family_id_key(uid);
-        if let Err(err) = manager.set_ex::<_, _, ()>(&key, family_id, 60*60*2).await {
+        if let Err(err) = instrumented_redis_cmd!(oc, manager, &key, set_ex::<_, _, ()>(&key, family_id, 60*60*2)) {
             log::error!("redis error! {}", err);
         }
     }
 
-    pub async fn get_family_id(&self, uid: &i64) -> Result<Option<i64>, RedisError> {
+    pub async fn get_family_id(&self, oc: &akasha::opentelemetry::Context, uid: &i64) -> Result<Option<i64>, RedisError> {
         let mut manager: redis::aio::ConnectionManager = self.manager.clone();
         let key = _family_id_key(uid);
-        let family_id: Option<i64> = match manager.get(&key).await {
+        let family_id: Option<i64> = match instrumented_redis_cmd!(oc, manager, &key, get(&key)) {
             Ok(family_id) => family_id,
             Err(err) => {
                 log::error!("redis error! {}", err);
