@@ -41,12 +41,19 @@ struct Args {
 
     #[arg(long, default_value_t = String::from("http://localhost:27001"))]
     account_service: String,
+
+    #[arg(long, default_value_t = String::from("api.simplife.tech:6831"))]
+    trace_endpoint: String,
+
+    #[arg(long, default_value_t = String::from("test"))]
+    service_version: String,
 }
 
 #[tokio::main]
 async fn main() {
     akasha::log::init_config(log::LevelFilter::Info);
     let args = Args::parse();
+    akasha::app::init_tracer(args.trace_endpoint, "ledger.service".to_string(), args.service_version);
 
     {
         let mut config = GLOBAL_CONFIG.write().await;
@@ -86,6 +93,7 @@ async fn main() {
         .route("/cash/add", post(record_cash))
         .route("/cash/list", get(cash_record_list))
         .route("/cash/delete", post(delete_cash_record))
+        .layer(axum::middleware::from_fn(akasha::app::trace_http))
         .with_state(app_state)
         ;
     let grpc = Server::builder()

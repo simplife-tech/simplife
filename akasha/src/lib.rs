@@ -7,3 +7,5 @@ pub mod request;
 pub mod time;
 pub mod log;
 pub use opentelemetry;
+pub use tracing;
+pub mod grpc;

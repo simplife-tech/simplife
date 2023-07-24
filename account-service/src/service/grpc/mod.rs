@@ -22,11 +22,13 @@ impl AccountService {
 #[async_trait]
 impl Account for AccountService {
     async fn get_uid(&self, request: Request<AccessKey>) -> Result<Response<GetUidReply>, Status> {
-        let r = request.into_inner();
-        if r.access_key.len()<1 {
+        let (_metadata, extensions, message) = request.into_parts();
+        let oc = extensions.get::<akasha::opentelemetry::Context>().unwrap();
+
+        if message.access_key.len()<1 {
             return Err(Status::new(Code::InvalidArgument, "access_key不合法"))
         }
-        let (uid, expires) = match self.redis.get_uid(&r.access_key).await {
+        let (uid, expires) = match self.redis.get_uid(oc, &message.access_key).await {
             Ok((uid, expires)) => (uid, expires),
             Err(_) => return Err(Status::new(Code::Internal, "redis异常"))
         };
@@ -36,10 +38,10 @@ impl Account for AccountService {
             },
             None => Err(Status::new(Code::NotFound, "未登录"))
         }
+
     }
     async fn get_family_id(&self, request: Request<Uid>) -> Result<Response<GetFamilyIdReply>, Status> {
         let r = request.into_inner();
-        
         let family_id = match self.redis.get_family_id(&r.uid).await {
             Ok(family_id) => {
                 family_id

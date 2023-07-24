@@ -95,6 +95,7 @@ dependencies = [
  "tonic",
  "tonic-reflection",
  "tower",
+ "tracing",
 ]
 
 [[package]]

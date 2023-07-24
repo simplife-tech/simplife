@@ -95,6 +95,7 @@ async fn main() {
         .with_state(app_state);
         
     let grpc = Server::builder()
+        .layer(akasha::grpc::GrpcOpentelemetryLayer)
         .add_service(AccountServer::new(AccountService::new(pool.clone(), redis.clone())))
         .into_service();
 

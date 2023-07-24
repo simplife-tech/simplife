@@ -1,17 +1,18 @@
 use akasha::dto::response::Response;
-use axum::{extract::{State, Query}, Json, response::IntoResponse};
+use axum::{extract::{State, Query}, Json, response::IntoResponse, Extension};
 
 use crate::{app_state::AppState, dto::ledger::{AddLedgerReq, GetLedgerReq, DeleteLedgerReq, LedgerDto}, strings::{NO_FAMILY, NO_LEDGER}};
 
 pub async fn add_ledger(
+    Extension(oc): Extension<akasha::opentelemetry::Context>,
     State(state): State<AppState>,
     Json(arg): Json<AddLedgerReq>
 ) -> axum::response::Response {
-    let uid = match state.grpc_client.get_uid(&arg.access_key).await {
+    let uid = match state.grpc_client.get_uid(oc.clone(), &arg.access_key).await {
         Ok(uid) => uid,
         Err(_) => return Json(Response::not_login()).into_response(),
     };
-    let family_id = match state.grpc_client.get_family_id(&uid).await {
+    let family_id = match state.grpc_client.get_family_id(oc.clone(), &uid).await {
         Ok(family_id) => family_id,
         Err(_) => return Json(Response::network_error()).into_response(),
     };
@@ -40,6 +41,7 @@ pub async fn add_ledger(
 }
 
 pub async fn delete_ledger(
+    Extension(oc): Extension<akasha::opentelemetry::Context>,
     State(state): State<AppState>,
     Json(arg): Json<DeleteLedgerReq>
 ) -> axum::response::Response {
@@ -53,7 +55,7 @@ pub async fn delete_ledger(
         Err(_) => return Json(Response::network_error()).into_response()
 
     };
-    let uid = match state.grpc_client.get_uid(&arg.access_key).await {
+    let uid = match state.grpc_client.get_uid(oc.clone(), &arg.access_key).await {
         Ok(uid) => uid,
         Err(_) => return Json(Response::not_login()).into_response(),
     };
@@ -63,7 +65,7 @@ pub async fn delete_ledger(
     match state.db.delete_ledger(&ledger.id).await {
         Ok(_) => {
             let _ = state.redis.remove_user_ledger(&uid).await;
-            if let Ok(family_id) = state.grpc_client.get_family_id(&uid).await {
+            if let Ok(family_id) = state.grpc_client.get_family_id(oc.clone(), &uid).await {
                 if family_id>0 {
                     let _ = state.redis.remove_family_ledger(&family_id).await;
                 }
@@ -75,18 +77,19 @@ pub async fn delete_ledger(
 }
 
 pub async fn ledger_list(
+    Extension(oc): Extension<akasha::opentelemetry::Context>,
     State(state): State<AppState>,
     Query(arg): Query<GetLedgerReq>
 ) -> axum::response::Response {
     if arg.pn<=0 || arg.ps <=0 {
         return Json(Response::bad_request("参数错误")).into_response()
     }
-    let uid = match state.grpc_client.get_uid(&arg.access_key).await {
+    let uid = match state.grpc_client.get_uid(oc.clone(), &arg.access_key).await {
         Ok(uid) => uid,
         Err(_) => return Json(Response::not_login()).into_response(),
     };
     if arg.kind == "family" {
-        let family_id = match state.grpc_client.get_family_id(&uid).await {
+        let family_id = match state.grpc_client.get_family_id(oc.clone(), &uid).await {
             Ok(family_id) => family_id,
             Err(_) => return Json(Response::network_error()).into_response(),
         };

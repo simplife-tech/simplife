@@ -6,8 +6,6 @@ use crate::{dto::login::{LoginReq, LoginRsp}, app_state::AppState};
 use akasha::crypto::sha3_512;
 
 pub async fn user_login(
-    Extension(trace_id): Extension<TraceId>,
-    Extension(span_id): Extension<SpanId>,
     Extension(oc): Extension<akasha::opentelemetry::Context>,
     State(state): State<AppState>,
     Json(arg): Json<LoginReq>
@@ -16,7 +14,7 @@ pub async fn user_login(
     match state.db.find_user_by_mobile(&arg.mobile).await {
         Ok(user) => {
             if user.password == password_hash {
-                match state.redis.set_session(oc, &user.id).await {
+                match state.redis.set_session(&oc, &user.id).await {
                     Ok(session_id) => {
                         Json(Response::data(LoginRsp{
                             uid: user.id,

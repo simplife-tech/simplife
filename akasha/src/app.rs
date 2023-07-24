@@ -4,17 +4,25 @@ use http::{Request, StatusCode, HeaderValue};
 use hyper::{body::{to_bytes, Bytes}, Body};
 use serde_json::json;
 use tokio::signal;
-use opentelemetry::{trace::{TraceError, Tracer, TraceContextExt, TracerProvider, TraceId}, sdk::trace::{self as sdktrace}, Key};
+use opentelemetry::{trace::{TraceError, Tracer, TraceContextExt, TracerProvider, TraceId}, sdk::trace::{self as sdktrace}, Key, global};
 
 #[macro_export]
 macro_rules! instrumented_redis_cmd {
     ($oc:expr, $conn:expr, $key:expr, $($arg:tt)*) => {{
         let tracer = akasha::opentelemetry::global::tracer_provider().tracer("");
-        let mut span = tracer.start_with_context("Redis.Command", &$oc);
+        let token = stringify!($($arg)*);
+        let name = if token.contains("get") {
+            "Redis:GET"
+        } else if token.contains("set") {
+            "Redis:SET"
+        } else {
+            "Redis:COMMAND"
+        };
+        let mut span = tracer.start_with_context(name, &$oc);
         span.set_attribute(akasha::opentelemetry::Key::new("db.key").string($key.to_string()));
         span.set_attribute(akasha::opentelemetry::Key::new("db.statement").string(stringify!($($arg)*)));
         span.set_attribute(akasha::opentelemetry::Key::new("peer.service").string("redis"));
-        let result = $conn.$($arg)*;
+        let result = $conn.$($arg)*.await;
         span.end();
         result
     }};
@@ -24,18 +32,14 @@ pub async fn trace_http<B>(
     mut req: Request<B>,
     next: Next<B>
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    opentelemetry::global::tracer_provider().tracer("").in_span(req.uri().to_string(), |cx| async move {
+    opentelemetry::global::tracer_provider().tracer("").in_span(req.uri().path().to_string(), |cx| async move {
         let span = cx.span();
         span.set_attribute(Key::new("http.method").string(req.method().to_string()));
         span.set_attribute(Key::new("http.target").string(req.uri().to_string()));
         let trace_id = span.span_context().trace_id();
-        let span_id = span.span_context().span_id();
-        req.extensions_mut().insert(trace_id);
-        req.extensions_mut().insert(span_id);
         req.extensions_mut().insert(cx.clone());
 
         let res = next.run(req).await;
-
         let (parts, body) = res.into_parts();
         let bytes = to_bytes(body).await.unwrap_or(Bytes::default());
         let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap_or(json!({ "code": -500 }));
@@ -45,7 +49,7 @@ pub async fn trace_http<B>(
         match res.headers_mut().try_entry("simplife-trace-id") {
             Ok(entry) => {
                 match entry {
-                    axum::http::header::Entry::Occupied(mut val) => {
+                    axum::http::header::Entry::Occupied(mut _val) => {
                         //has val
                     }
                     axum::http::header::Entry::Vacant(val) => {
@@ -72,6 +76,7 @@ pub fn init_tracer(endpoint: String, service_name: String, service_version: Stri
             ]),
         ))
         .build_batch(opentelemetry::runtime::Tokio);
+    global::set_text_map_propagator(opentelemetry_jaeger::Propagator::new());
     opentelemetry::global::set_tracer_provider(provider.unwrap());
 }
 

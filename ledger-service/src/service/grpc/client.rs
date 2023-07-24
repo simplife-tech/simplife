@@ -1,3 +1,4 @@
+use akasha::{opentelemetry::{global, Context}, grpc::{MetadataExtractor, MetadataInjector}};
 use tonic::transport::Channel;
 
 use super::proto::account_service::{account_client::AccountClient, AccessKey, Uid};
@@ -14,9 +15,12 @@ impl GrpcClient {
         Self { account_service: AccountClient::new(channel.clone()) }
     }
 
-    pub async fn get_uid(&self, access_key: &str) -> Result<i64, tonic::Status> {
-        let request = tonic::Request::new(AccessKey {
+    pub async fn get_uid(&self, oc: Context, access_key: &str) -> Result<i64, tonic::Status> {
+        let mut request = tonic::Request::new(AccessKey {
             access_key: access_key.to_string()
+        });
+        global::get_text_map_propagator(|propagator| {
+            propagator.inject_context(&oc, &mut MetadataInjector(request.metadata_mut()))
         });
         let response = self.account_service.clone().get_uid(request).await;
         match response {
@@ -25,9 +29,12 @@ impl GrpcClient {
         }
     }
 
-    pub async fn get_family_id(&self, uid: &i64) -> Result<i64, tonic::Status> {
-        let request = tonic::Request::new(Uid {
+    pub async fn get_family_id(&self, oc: Context, uid: &i64) -> Result<i64, tonic::Status> {
+        let mut request = tonic::Request::new(Uid {
             uid: *uid
+        });
+        global::get_text_map_propagator(|propagator| {
+            propagator.inject_context(&oc, &mut MetadataInjector(request.metadata_mut()))
         });
         let response = self.account_service.clone().get_family_id(request).await;
         match response {
