@@ -9,11 +9,11 @@ pub async fn record_cash(
     State(state): State<AppState>,
     Json(arg): Json<RecordCashReq>
 ) -> axum::response::Response {
-    let uid = match state.grpc_client.get_uid(oc.clone(), &arg.access_key).await {
+    let uid = match state.grpc_client.get_uid(&oc, &arg.access_key).await {
         Ok(uid) => uid,
         Err(_) => return Json(Response::not_login()).into_response(),
     };
-    let family_id = match state.grpc_client.get_family_id(oc.clone(), &uid).await {
+    let family_id = match state.grpc_client.get_family_id(&oc, &uid).await {
         Ok(family_id) => family_id,
         Err(_) => return Json(Response::network_error()).into_response(),
     };
@@ -46,11 +46,11 @@ pub async fn delete_cash_record(
         Err(_) => return Json(Response::network_error()).into_response()
 
     };
-    let uid = match state.grpc_client.get_uid(oc.clone(), &arg.access_key).await {
+    let uid = match state.grpc_client.get_uid(&oc, &arg.access_key).await {
         Ok(uid) => uid,
         Err(_) => return Json(Response::not_login()).into_response(),
     };
-    let family_id = match state.grpc_client.get_family_id(oc.clone(), &uid).await {
+    let family_id = match state.grpc_client.get_family_id(&oc, &uid).await {
         Ok(family_id) => family_id,
         Err(_) => return Json(Response::network_error()).into_response(),
     };
@@ -77,11 +77,11 @@ pub async fn cash_record_list(
     if arg.pn<=0 || arg.ps <=0 {
         return Json(Response::bad_request("参数错误")).into_response()
     }
-    let uid = match state.grpc_client.get_uid(oc.clone(), &arg.access_key).await {
+    let uid = match state.grpc_client.get_uid(&oc, &arg.access_key).await {
         Ok(uid) => uid,
         Err(_) => return Json(Response::not_login()).into_response(),
     };
-    let family_id = match state.grpc_client.get_family_id(oc.clone(), &uid).await {
+    let family_id = match state.grpc_client.get_family_id(&oc, &uid).await {
         Ok(family_id) => family_id,
         Err(_) => return Json(Response::network_error()).into_response(),
     };

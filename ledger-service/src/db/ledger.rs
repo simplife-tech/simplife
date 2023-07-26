@@ -1,6 +1,8 @@
 
+use akasha::instrumented_mysql_cmd;
+use akasha::opentelemetry::trace::{Tracer, Span, TracerProvider};
 use chrono::{Local, NaiveDateTime};
-use sqlx::{FromRow, types::chrono::DateTime, Error};
+use sqlx::{FromRow, Error};
 use serde::{Deserialize, Serialize};
 
 use super::Db;
@@ -27,9 +29,9 @@ const GET_FAMILY_LEDGER_LIST_SQL: &str = "select id, uid, family_id, date, amoun
 const GET_USER_LEDGER_LIST_SQL: &str = "select id, uid, family_id, date, amount, comment, ctime, mtime, clazz_1, clazz_2 from ledger where uid=? and date between ? and ? and state='active' order by date desc limit ?, ?";
 
 impl Db {
-    pub async fn add_ledger_with_uid(&self, uid: &i64, date: &NaiveDateTime, amount: &i64, comment: &str, clazz_1: &str, clazz_2: &str) -> Result<u64, Error> {
+    pub async fn add_ledger_with_uid(&self, oc: &akasha::opentelemetry::Context, uid: &i64, date: &NaiveDateTime, amount: &i64, comment: &str, clazz_1: &str, clazz_2: &str) -> Result<u64, Error> {
         let now = Local::now().naive_local();
-        match sqlx::query(ADD_USER_LEDGER_SQL)
+        match instrumented_mysql_cmd!(oc, ADD_USER_LEDGER_SQL, sqlx::query(ADD_USER_LEDGER_SQL)
         .bind(uid)
         .bind(date)
         .bind(amount)
@@ -40,7 +42,7 @@ impl Db {
         .bind(clazz_2) 
         .bind("active")
         .execute(&self.pool)
-        .await {
+        ) {
             Ok(r) => Ok(r.last_insert_id()),
             Err(err) => {
                 log::error!("db error! {}", err);
@@ -49,9 +51,9 @@ impl Db {
         }
     }
 
-    pub async fn add_ledger_with_uid_and_family_id(&self, uid: &i64, family_id: &i64, date: &NaiveDateTime, amount: &i64, comment: &str, clazz_1: &str, clazz_2: &str) -> Result<u64, Error> {
+    pub async fn add_ledger_with_uid_and_family_id(&self, oc: &akasha::opentelemetry::Context, uid: &i64, family_id: &i64, date: &NaiveDateTime, amount: &i64, comment: &str, clazz_1: &str, clazz_2: &str) -> Result<u64, Error> {
         let now = Local::now().naive_local();
-        match sqlx::query(ADD_FAMILY_LEDGER_SQL)
+        match instrumented_mysql_cmd!(oc, ADD_FAMILY_LEDGER_SQL, sqlx::query(ADD_FAMILY_LEDGER_SQL)
         .bind(uid)
         .bind(family_id)
         .bind(date)
@@ -63,7 +65,7 @@ impl Db {
         .bind(clazz_2) 
         .bind("active")
         .execute(&self.pool)
-        .await {
+        ) {
             Ok(r) => Ok(r.last_insert_id()),
             Err(err) => {
                 log::error!("db error! {}", err);
@@ -72,11 +74,11 @@ impl Db {
         }
     }
 
-    pub async fn delete_ledger(&self, id: &i64) -> Result<u64, Error> {
-        match sqlx::query(DELETE_LEDGER_SQL)
+    pub async fn delete_ledger(&self, oc: &akasha::opentelemetry::Context, id: &i64) -> Result<u64, Error> {
+        match instrumented_mysql_cmd!(oc, DELETE_LEDGER_SQL, sqlx::query(DELETE_LEDGER_SQL)
         .bind(id)
         .execute(&self.pool)
-        .await {
+        ) {
             Ok(r) => Ok(r.rows_affected()),
             Err(err) => {
                 log::error!("db error! {}", err);
@@ -85,11 +87,11 @@ impl Db {
         }
     }
 
-    pub async fn get_ledger(&self, id: &i64) -> Result<Option<Ledger>, Error> {
-        match sqlx::query_as::<_, Ledger>(GET_LEDGER_SQL)
+    pub async fn get_ledger(&self, oc: &akasha::opentelemetry::Context, id: &i64) -> Result<Option<Ledger>, Error> {
+        match instrumented_mysql_cmd!(oc, GET_LEDGER_SQL, sqlx::query_as::<_, Ledger>(GET_LEDGER_SQL)
         .bind(id)
         .fetch_optional(&self.pool)
-        .await {
+        ) {
             Ok(ledger) => Ok(ledger),
             Err(err) => {
                 log::error!("db error! {}", err);
@@ -98,15 +100,15 @@ impl Db {
         }
     }
 
-    pub async fn get_family_ledger_list(&self, family_id: &i64, date_start: &NaiveDateTime, date_end: &NaiveDateTime, pn: &i64, ps: &i64) -> Result<Vec<Ledger>, Error> {
-        match sqlx::query_as::<_, Ledger>(GET_FAMILY_LEDGER_LIST_SQL)
+    pub async fn get_family_ledger_list(&self, oc: &akasha::opentelemetry::Context, family_id: &i64, date_start: &NaiveDateTime, date_end: &NaiveDateTime, pn: &i64, ps: &i64) -> Result<Vec<Ledger>, Error> {
+        match instrumented_mysql_cmd!(oc, GET_FAMILY_LEDGER_LIST_SQL, sqlx::query_as::<_, Ledger>(GET_FAMILY_LEDGER_LIST_SQL)
         .bind(family_id)
         .bind(date_start)
         .bind(date_end)
         .bind((pn-1)*ps)
         .bind(ps)
         .fetch_all(&self.pool)
-        .await {
+        ) {
             Ok(ledgers) => Ok(ledgers),
             Err(err) => {
                 log::error!("db error! {}", err);
@@ -115,15 +117,15 @@ impl Db {
         }
     }
 
-    pub async fn get_user_ledger_list(&self, uid: &i64, date_start: &NaiveDateTime, date_end: &NaiveDateTime, pn: &i64, ps: &i64) -> Result<Vec<Ledger>, Error> {
-        match sqlx::query_as::<_, Ledger>(GET_USER_LEDGER_LIST_SQL)
+    pub async fn get_user_ledger_list(&self, oc: &akasha::opentelemetry::Context, uid: &i64, date_start: &NaiveDateTime, date_end: &NaiveDateTime, pn: &i64, ps: &i64) -> Result<Vec<Ledger>, Error> {
+        match instrumented_mysql_cmd!(oc, GET_USER_LEDGER_LIST_SQL, sqlx::query_as::<_, Ledger>(GET_USER_LEDGER_LIST_SQL)
         .bind(uid)
         .bind(date_start)
         .bind(date_end)
         .bind((pn-1)*ps)
         .bind(ps)
         .fetch_all(&self.pool)
-        .await {
+        ) {
             Ok(ledgers) => Ok(ledgers),
             Err(err) => {
                 log::error!("db error! {}", err);

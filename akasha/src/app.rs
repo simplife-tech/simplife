@@ -11,7 +11,11 @@ macro_rules! instrumented_redis_cmd {
     ($oc:expr, $conn:expr, $key:expr, $($arg:tt)*) => {{
         let tracer = akasha::opentelemetry::global::tracer_provider().tracer("");
         let token = stringify!($($arg)*);
-        let name = if token.contains("get") {
+        let name = if token.contains("hget") {
+            "Redis:HGET"
+        } else if token.contains("hset") {
+            "Redis:HSET"
+        } else if token.contains("get") {
             "Redis:GET"
         } else if token.contains("set") {
             "Redis:SET"
