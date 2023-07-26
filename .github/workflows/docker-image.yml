@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ "master" ]
 
+env:
+  IMAGE_NAME: devynchou/simplife.account.service:$(date +%s)
+  DOCKERHUB_USERNAME: devynchou
+  DOCKERHUB_TOKEN: dckr_pat_dQJ8GiIOtj020SL6t3SmNNc69T0
+  
 jobs:
 
   build:
@@ -15,4 +20,14 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build the Docker image
-      run: docker build . --file account-service/Dockerfile --tag simplife.account.service:$(date +%s) 
+      run: docker build . --file account-service/Dockerfile --tag ${{env.IMAGE_NAME}}
+    - name: Echo Docker image name
+      run: echo ${{env.IMAGE_NAME}}
+    - name: Login to DockerHub
+      uses: docker/login-action@v1 
+      with:
+        username: ${{ env.DOCKERHUB_USERNAME }}
+        password: ${{ env.DOCKERHUB_TOKEN }}
+    - name: push Docker image to Docker Hub
+      run: docker push ${{env.IMAGE_NAME}}
+    
