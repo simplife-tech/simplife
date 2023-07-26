@@ -7,16 +7,13 @@ on:
     branches: [ "master" ]
 
 env:
-  IMAGE_NAME: devynchou/simplife.account.service:$(date +%s)
+  IMAGE_NAME: devynchou/simplife.account.service:${{ github.sha }}
   DOCKERHUB_USERNAME: devynchou
   DOCKERHUB_TOKEN: dckr_pat_dQJ8GiIOtj020SL6t3SmNNc69T0
   
 jobs:
-
-  build:
-
+  account-service:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
     - name: Build the Docker image
