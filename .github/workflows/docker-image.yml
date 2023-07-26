@@ -11,7 +11,7 @@ on:
       - "v*"
 
 env:
-  IMAGE_TAG: ${{ github.event_name=="tags" && ${GITHUB_REF##*/} || github.sha }}
+  IMAGE_TAG: ${{ github.event_name == "tags" && ${GITHUB_REF##*/} || github.sha }}
   DOCKERHUB_USERNAME: devynchou
   DOCKERHUB_TOKEN: dckr_pat_dQJ8GiIOtj020SL6t3SmNNc69T0
   
