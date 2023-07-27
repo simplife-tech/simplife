@@ -11,7 +11,7 @@ on:
       - "v*"
 
 env:
-  IMAGE_TAG: ${{ github.event_name == 'tags' && github.event.release.tag_name || github.sha }}
+  IMAGE_TAG: ${{ contains(github.ref, 'refs/tags/') && github.ref_name || github.sha }}
   DOCKERHUB_USERNAME: devynchou
   DOCKERHUB_TOKEN: dckr_pat_dQJ8GiIOtj020SL6t3SmNNc69T0
   
