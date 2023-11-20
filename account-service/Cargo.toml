@@ -1,0 +1,29 @@
+[package]
+name = "account-service"
+version = "0.1.0"
+edition = "2021"
+
+[build-dependencies]
+tonic-build = "0.9.2"
+
+[dependencies]
+akasha = { path = "../akasha" }
+clap = { version = "4.3.4", features = ["derive"] }
+http = "0.2.9"
+prost = "0.11.9"
+tokio = { version = "1.28.1",  features = ["full"] }
+tonic = { version = "0.9.2" }
+axum = { version = "0.6.18", features = ["macros"] }
+axum-server = "0.5.1"
+tower = { version = "0.4.13", features = ["make", "steer"] }
+serde = {version = "1.0", features = ["derive"] }
+hyper = { version = "0.14", features = ["full"] }
+sqlx = { version = "0.6", features = ["runtime-tokio-rustls", "mysql", "chrono"] }
+redis = { version = "0.23.0", features = ["tokio-comp", "json", "aio", "connection-manager"] }
+lazy_static = "1.4.0"
+serde_json = "1.0.97"
+
+rand = "0.8.5"
+log = "0.4"
+tower-http = { version = "0.4.3", features = ["trace"] }
+

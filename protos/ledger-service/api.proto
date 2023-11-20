@@ -1,0 +1,14 @@
+syntax = "proto3";
+package ledger.service.v1;
+
+message HelloWorldReq {
+    int64 n = 1;  
+}
+
+message HelloWorldReply {
+    int64 n = 1;
+}
+
+service Ledger {
+    rpc HelloWorld (HelloWorldReq) returns (HelloWorldReply);
+}
